@@ -7,7 +7,10 @@ import json
 from Process import Process
 from Scheduler import Scheduler
 import time  # Import the time module
-from SchedulingAlgorithm import FCFS as FCSF
+import SchedulingAlgorithm 
+from SchedulingAlgorithm import FCFS as FCFS
+from SchedulingAlgorithm import SJF as SJF
+from SchedulingAlgorithm import Priority as Priority
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -24,28 +27,35 @@ dash_app.layout = html.Div(id='output')
 def schedule():
     job_data = request.json
     print(job_data)
-    # Process job data (you can add your logic here)
-    # For now, let's just assume job_data contains intervals for processes
-    # Extract process names, start times, and durations from job data
     algorithm = job_data[-1]['algorithm']
     scheduler = Scheduler()
+    
+    # Initialize the scheduling algorithm based on the selected algorithm
     if algorithm == 'FCFS':
-        algo=FCSF()
-        scheduler.set_algorithm(algo)
-    job_data.pop()
+        algo=FCFS()
+    elif algorithm == 'SJF':
+        algo=SJF()
+    elif algorithm == 'Priority':
+        algo=Priority()
+    scheduler.set_algorithm(algo)
+    
+    
+    job_data.pop() # Remove the scheduling algorithm from the job data
+    
     process_names = [job['pid'] for job in job_data]
-    start_times = [job['arrival_time'] for job in job_data]
+    arrival_times = [job['arrival_time'] for job in job_data]
     durations = [job['burst_time'] for job in job_data]
-    processes = [Process(name, start, duration) for name, start, duration in zip(process_names, start_times, durations)]
+    priorities = [job['priority'] for job in job_data]
+    processes = [Process(name, int(arrival),int(duration)) for name, arrival, duration in zip(process_names, arrival_times, durations)]
+    if algorithm == 'Priority':
+        for process, priority in zip(processes, priorities):
+            process.priority = int(priority)
     print(processes)
     scheduler.set_processes(processes)
     #try:
-    start_times, process_names,durations= scheduler.run()
-    #except Exception as e:
-    #    return str(e), 400
-    #durations=[5,10,7,8,13,6,2]
-    #start_times=[0,11,14,20,25,30,30]
-    #process_names=['P1','P2','P3','P4','P5','P6','P1']
+    process_names,start_times,durations= scheduler.run()
+    print(start_times)
+    print('done')
     tasks = []
     for name, start, duration in zip(process_names, start_times, durations):
         start = float(start)  # Convert start to float
@@ -58,7 +68,75 @@ def schedule():
     dash_app.layout = html.Div([
         dcc.Graph(id='job-gantt-chart', figure=fig),
     ])
+    return redirect(url_for('render_dashboard'))
 
+
+
+
+
+
+
+@app.route('/upload', methods=['POST'])
+def processFile():
+    # Check if a file is uploaded
+    if 'file' not in request.files:
+        return redirect(request.url)
+    
+    file = request.files['file']
+    
+    # Check if the file is empty
+    if file.filename == '':
+        return redirect(request.url)
+    
+    # Read CSV file
+    job_data = []
+    csv_reader = csv.reader(file)
+    next(csv_reader)  # Skip header row
+    for row in csv_reader:
+        pid, arrival_time, burst_time, priority = row
+        # Convert priority to integer if not None
+        priority = int(priority) if priority != 'None' else None
+        job_data.append({'pid': pid, 'arrival_time': int(arrival_time), 'burst_time': int(burst_time), 'priority': priority})
+
+    print(job_data)
+    algorithm = job_data[-1]['algorithm']
+    scheduler = Scheduler()
+    
+    # Initialize the scheduling algorithm based on the selected algorithm
+    if algorithm == 'FCFS':
+        algo = FCFS()
+    elif algorithm == 'SJF':
+        algo = SJF()
+    elif algorithm == 'Priority':
+        algo = Priority()
+    scheduler.set_algorithm(algo)
+    
+    job_data.pop() # Remove the scheduling algorithm from the job data
+    
+    process_names = [job['pid'] for job in job_data]
+    arrival_times = [job['arrival_time'] for job in job_data]
+    durations = [job['burst_time'] for job in job_data]
+    priorities = [job['priority'] for job in job_data]
+    
+    processes = [Process(name, int(arrival), int(duration), priority=priority) for name, arrival, duration, priority in zip(process_names, arrival_times, durations, priorities)]
+    
+    scheduler.set_processes(processes)
+    
+    process_names, start_times, durations = scheduler.run()
+    
+    tasks = []
+    for name, start, duration in zip(process_names, start_times, durations):
+        start = float(start)  # Convert start to float
+        tasks.append({'Task': name, 'Start': start, 'Finish': start + float(duration), 'Resource': name})  # Add 'Resource' key for legend
+    
+    # Create Gantt chart using create_gantt() function
+    fig = ff.create_gantt(tasks, index_col='Task', title='Job Schedule', group_tasks=True, show_colorbar=True)
+    # Customize x-axis properties to remove time units and start from 0
+    fig.update_layout(xaxis_type='linear')
+    # Update Dash app layout with new Gantt chart
+    dash_app.layout = html.Div([
+        dcc.Graph(id='job-gantt-chart', figure=fig),
+    ])
     return redirect(url_for('render_dashboard'))
 
 
@@ -67,6 +145,10 @@ def schedule():
 def index():
     return render_template('index.html')
 
+
+@app.route('/manual')
+def manual():
+    return render_template('manual.html')
 
 @app.route('/dashboard/')
 def render_dashboard():

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Submission Form</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>Process Submission Form</h2>
+        <form id="process-form">
+            <div id="processes-container">
+                <div class="process-container">
+                    <div class="form-group">
+                        <label for="pid">Process ID:</label>
+                        <input type="text" class="form-control" name="pid" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="arrival_time">Arrival Time:</label>
+                        <input type="number" class="form-control" name="arrival_time" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="burst_time">Burst Time:</label>
+                        <input type="number" class="form-control" name="burst_time" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="priority" class="priority-label" >Priority:</label>
+                        <input type="number" class="form-control priority-input" name="priority" min="1" disabled>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="algorithm">Select Scheduling Algorithm:</label>
+                <select class="form-control" id="algorithm" required>
+                    <option value="FCFS">First Come, First Served (FCFS)</option>
+                    <option value="SJF">Shortest Job First (SJF)</option>
+                    <option value="RR">Round Robin (RR)</option>
+                    <option value="Priority">Priority Scheduling</option>
+                </select>
+            </div>
+            <div id="quantum-field" style="display:none;" class="form-group">
+                <label for="quantum">Quantum for Round Robin:</label>
+                <input type="number" class="form-control" name="quantum">
+            </div>
+            <button type="button" class="btn btn-primary mb-3" id="add-process-btn">Add Process</button>
+            <button type="submit" class="btn btn-success">Submit</button>
+        </form>
+    </div>
+
+    <!-- Bootstrap JS (optional, if you want to use Bootstrap JavaScript features) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        document.getElementById('add-process-btn').addEventListener('click', function() {
+            const processesContainer = document.getElementById('processes-container');
+            
+            // Create a new process container
+            const newProcessContainer = document.createElement('div');
+            newProcessContainer.classList.add('process-container');
+            
+            // Add input fields for the new process
+            newProcessContainer.innerHTML = `
+                <div class="form-group">
+                    <label for="pid">Process ID:</label>
+                    <input type="text" class="form-control" name="pid" required>
+                </div>
+                <div class="form-group">
+                    <label for="arrival_time">Arrival Time:</label>
+                    <input type="number" class="form-control" name="arrival_time" required>
+                </div>
+                <div class="form-group">
+                    <label for="burst_time">Burst Time:</label>
+                    <input type="number" class="form-control" name="burst_time" required>
+                </div>
+                <div class="form-group">
+                    <label for="priority" class="priority-label" >Priority:</label>
+                    <input type="number" class="form-control priority-input" name="priority" min="1" disabled>
+                </div>
+            `;
+            
+            // Append the new process container to the processes container
+            processesContainer.appendChild(newProcessContainer);
+        });
+
+        document.getElementById('algorithm').addEventListener('change', function() {
+            const algorithm = this.value;
+            const quantumField = document.getElementById('quantum-field');
+            const priorityLabels = document.querySelectorAll('.priority-label');
+            const priorityInputs = document.querySelectorAll('.priority-input');
+
+            if (algorithm === "RR") {
+                quantumField.style.display = 'block';
+                priorityInputs.forEach(input => input.disabled = true);
+            } else if (algorithm === "Priority") {
+                quantumField.style.display = 'none';
+                priorityInputs.forEach(input => input.disabled = false);
+            } else {
+                quantumField.style.display = 'none';
+                priorityInputs.forEach(input => input.disabled = true);
+            }
+        });
+        
+        document.getElementById('process-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            console.log('Form submitted');
+            const processContainers = document.querySelectorAll('.process-container');
+            console.log('Number of process containers:', processContainers.length);
+            const processesData = [];
+            const algorithm = document.getElementById('algorithm').value; // Get the selected algorithm once
+            
+            processContainers.forEach(container => {
+                const pid = container.querySelector('[name="pid"]').value;
+                const arrivalTime = container.querySelector('[name="arrival_time"]').value;
+                const burstTime = container.querySelector('[name="burst_time"]').value;
+                const priority = container.querySelector('[name="priority"]').value;
+        
+                const processData = {
+                    "pid": pid,
+                    "arrival_time": arrivalTime,
+                    "burst_time": burstTime,
+                    "priority": priority // Include priority in the data
+                };
+                processesData.push(processData);
+            });
+            console.log('Process data:', processesData);
+            processesData.push({"algorithm": algorithm}); 
+            fetch('/schedule', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(processesData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Redirect to dashboard
+                    window.location.href = response.url;
+                } else {
+                    throw new Error('Network response was not ok');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.'); // Show error message
+            });
+        });
+    </script>
+</body>
+</html>

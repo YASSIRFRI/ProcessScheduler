@@ -3,133 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Process Submission Form</title>
+    <title>Process Scheduling Algorithm</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        /* Custom styles */
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .navbar {
+            background-color: #28a745 !important;
+        }
+        .navbar-light .navbar-nav .nav-link {
+            color: #f8f9fa !important;
+        }
+        .footer {
+            background-color: #28a745;
+            color: #f8f9fa;
+            margin-top: auto;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h2>Process Submission Form</h2>
-        <form id="process-form">
-            <div id="processes-container">
-                <div class="process-container">
-                    <div class="form-group">
-                        <label for="pid">Process ID:</label>
-                        <input type="text" class="form-control" name="pid" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="arrival_time">Arrival Time:</label>
-                        <input type="number" class="form-control" name="arrival_time" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="burst_time">Burst Time:</label>
-                        <input type="number" class="form-control" name="burst_time" required>
-                    </div>
+
+<header>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">Process Scheduling Algorithm</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/manual">Manual Upload</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#compare">Compare Algorithms</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="documentation.html">Documentation</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<!-- Main content -->
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Upload Data</h2>
+            <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="fileInput">Upload CSV or Excel file:</label>
+                    <input type="file" class="form-control-file" id="fileInput" name="file">
                 </div>
-            </div>
-            <div class="form-group">
-                <label for="algorithm">Select Scheduling Algorithm:</label>
-                <select class="form-control" id="algorithm" required>
-                    <option value="FCFS">First Come, First Served (FCFS)</option>
-                    <option value="SJF">Shortest Job First (SJF)</option>
-                    <option value="RR">Round Robin (RR)</option>
-                    <option value="Priority">Priority Scheduling</option>
-                </select>
-            </div>
-            <div id="quantum-field" style="display:none;" class="form-group">
-                <label for="quantum">Quantum for Round Robin:</label>
-                <input type="number" class="form-control" name="quantum">
-            </div>
-            <button type="button" class="btn btn-primary mb-3" id="add-process-btn">Add Process</button>
-            <button type="submit" class="btn btn-success">Submit</button>
-        </form>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </form>
+        </div>
     </div>
+</div>
 
-    <!-- Bootstrap JS (optional, if you want to use Bootstrap JavaScript features) -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<footer class="footer">
+    <div class="container text-center">
+        <span>© 2024 Process Scheduling Algorithm</span>
+    </div>
+</footer>
 
-    <script>
-        document.getElementById('add-process-btn').addEventListener('click', function() {
-            const processesContainer = document.getElementById('processes-container');
-            
-            // Create a new process container
-            const newProcessContainer = document.createElement('div');
-            newProcessContainer.classList.add('process-container');
-            
-            // Add input fields for the new process
-            newProcessContainer.innerHTML = `
-                <div class="form-group">
-                    <label for="pid">Process ID:</label>
-                    <input type="text" class="form-control" name="pid" required>
-                </div>
-                <div class="form-group">
-                    <label for="arrival_time">Arrival Time:</label>
-                    <input type="number" class="form-control" name="arrival_time" required>
-                </div>
-                <div class="form-group">
-                    <label for="burst_time">Burst Time:</label>
-                    <input type="number" class="form-control" name="burst_time" required>
-                </div>
-            `;
-            
-            // Append the new process container to the processes container
-            processesContainer.appendChild(newProcessContainer);
-        });
-
-        document.getElementById('algorithm').addEventListener('change', function() {
-            const algorithm = this.value;
-            const quantumField = document.getElementById('quantum-field');
-
-            if (algorithm === "RR") {
-                quantumField.style.display = 'block';
-            } else {
-                quantumField.style.display = 'none';
-            }
-        });
-        
-        document.getElementById('process-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            console.log('Form submitted');
-            const processContainers = document.querySelectorAll('.process-container');
-            console.log('Number of process containers:', processContainers.length);
-            const processesData = [];
-            const algorithm = document.getElementById('algorithm').value; // Get the selected algorithm once
-            
-            processContainers.forEach(container => {
-                const pid = container.querySelector('[name="pid"]').value;
-                const arrivalTime = container.querySelector('[name="arrival_time"]').value;
-                const burstTime = container.querySelector('[name="burst_time"]').value;
-        
-                const processData = {
-                    "pid": pid,
-                    "arrival_time": arrivalTime,
-                    "burst_time": burstTime,
-                };
-                processesData.push(processData);
-            });
-            console.log('Process data:', processesData);
-            processesData.push({"algorithm": algorithm}); 
-            fetch('/schedule', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(processesData)
-            })
-            .then(response => {
-                if (response.ok) {
-                    // Redirect to dashboard
-                    window.location.href = response.url;
-                } else {
-                    throw new Error('Network response was not ok');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred. Please try again.'); // Show error message
-            });
-        });
-    </script>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
