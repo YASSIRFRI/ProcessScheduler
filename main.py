@@ -116,6 +116,14 @@ def processFile():
     algorithm = request.form['algorithm']
     scheduler = Scheduler()
 
+    print("")
+    print("")
+    print("")
+    print(job_data)
+    print("")
+    print("")
+    print("")
+
     # Initialize the scheduling algorithm based on the selected algorithm
     if algorithm == 'FCFS':
         algorithm = FCFS()
@@ -127,6 +135,10 @@ def processFile():
         if request.form["quantum"]:
             quantum = int(request.form["quantum"])
         algorithm = RR(quantum)
+    elif algorithm == 'PriorityRR':
+        if request.form["quantum"]:
+            quantum = int(request.form["quantum"])
+        algorithm = PriorityRR(quantum)
     else:
         return algorithm
     scheduler.set_algorithm(algorithm)
