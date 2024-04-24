@@ -25,7 +25,6 @@ dash_app.layout = html.Div(id='output')
 # Define route for submitting jobs
 
 #Shceduler should return : [proceses] [start_times] [durations]
-
 @app.route('/schedule', methods=['POST'])
 def schedule():
     job_data = request.json
@@ -82,7 +81,6 @@ def schedule():
 
 
 
-
 @app.route('/upload', methods=['POST'])
 def processFile():
     if 'file' not in request.files:
@@ -93,54 +91,59 @@ def processFile():
     if file.filename == '':
         return redirect(request.url)
     
-    # Wrap the file stream in a TextIOWrapper to ensure it's opened in text mode
-    file_wrapper = TextIOWrapper(file, encoding='utf-8')
-    
-    # Read CSV file
-    job_data = []
-    csv_reader = csv.reader(file_wrapper)
-    for row in csv_reader:
-        if len(row) == 3:
-            pid, arrival_time, burst_time = row
-            job_data.append({'pid': pid, 'arrival_time': int(arrival_time), 'burst_time': int(burst_time), 'priority': None})
-        else:
-            pid, arrival_time, burst_time, priority = row
-            priority = int(priority) if priority != 'None' else None
-            job_data.append({'pid': pid, 'arrival_time': int(arrival_time), 'burst_time': int(burst_time), 'priority': priority})
-    print(job_data)
-    algorithm = job_data[-1]['algorithm']
-    scheduler = Scheduler()
-    
+    try:
+        # Wrap the file stream in a TextIOWrapper to ensure it's opened in text mode
+        file_wrapper = TextIOWrapper(file, encoding='utf-8')
 
-    # TODO: add round robin and priorityrr with quanta in constructor
+        # Read CSV file
+        job_data = []
+        csv_reader = csv.reader(file_wrapper)
+        for row in csv_reader:
+            try:
+                if len(row) == 3:
+                    pid, arrival_time, burst_time = row
+                    job_data.append({'pid': pid, 'arrival_time': int(arrival_time), 'burst_time': int(burst_time), 'priority': None})
+                else:
+                    pid, arrival_time, burst_time, priority = row
+                    priority = int(priority) if priority != 'None' else None
+                    job_data.append({'pid': pid, 'arrival_time': int(arrival_time), 'burst_time': int(burst_time), 'priority': priority})
+            except ValueError:
+                # Handle ValueError for incorrect data format in CSV row
+                return "Error: Incorrect data format in CSV file."
+
+        # Handle if CSV file has trailing newline characters
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+    algorithm = request.form['algorithm']
+    scheduler = Scheduler()
 
     # Initialize the scheduling algorithm based on the selected algorithm
     if algorithm == 'FCFS':
-        algo = FCFS()
+        algorithm = FCFS()
     elif algorithm == 'SJF':
-        algo = SJF()
+        algorithm = SJF()
     elif algorithm == 'Priority':
-        algo = Priority()
-    scheduler.set_algorithm(algo)
-    
-    job_data.pop() # Remove the scheduling algorithm from the job data
-    
+        algorithm = Priority()
+    else:
+        return algorithm
+
+    scheduler.set_algorithm(algorithm)
     process_names = [job['pid'] for job in job_data]
     arrival_times = [job['arrival_time'] for job in job_data]
     durations = [job['burst_time'] for job in job_data]
     priorities = [job['priority'] for job in job_data]
-    
     processes = [Process(name, int(arrival), int(duration), priority=priority) for name, arrival, duration, priority in zip(process_names, arrival_times, durations, priorities)]
-    
+
     scheduler.set_processes(processes)
-    
+
     process_names, start_times, durations = scheduler.run()
-    
+
     tasks = []
     for name, start, duration in zip(process_names, start_times, durations):
         start = float(start)  # Convert start to float
         tasks.append({'Task': name, 'Start': start, 'Finish': start + float(duration), 'Resource': name})  # Add 'Resource' key for legend
-    
+
     # Create Gantt chart using create_gantt() function
     fig = ff.create_gantt(tasks, index_col='Task', title='Job Schedule', group_tasks=True, show_colorbar=True)
     # Customize x-axis properties to remove time units and start from 0
@@ -150,6 +153,7 @@ def processFile():
         dcc.Graph(id='job-gantt-chart', figure=fig),
     ])
     return redirect(url_for('render_dashboard'))
+
 
 
 
