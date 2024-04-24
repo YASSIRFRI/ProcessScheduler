@@ -1,11 +1,12 @@
-# Import necessary libraries
 from flask import Flask, request, render_template, redirect, url_for
 import dash
 from dash import dcc, html
 import plotly.figure_factory as ff
 import json
+import csv
 from Process import Process
 from Scheduler import Scheduler
+from io import TextIOWrapper
 import time  # Import the time module
 import SchedulingAlgorithm 
 from SchedulingAlgorithm import FCFS as FCFS
@@ -75,29 +76,30 @@ def schedule():
 
 
 
-
 @app.route('/upload', methods=['POST'])
 def processFile():
-    # Check if a file is uploaded
     if 'file' not in request.files:
         return redirect(request.url)
-    
     file = request.files['file']
     
     # Check if the file is empty
     if file.filename == '':
         return redirect(request.url)
     
+    # Wrap the file stream in a TextIOWrapper to ensure it's opened in text mode
+    file_wrapper = TextIOWrapper(file, encoding='utf-8')
+    
     # Read CSV file
     job_data = []
-    csv_reader = csv.reader(file)
-    next(csv_reader)  # Skip header row
+    csv_reader = csv.reader(file_wrapper)
     for row in csv_reader:
-        pid, arrival_time, burst_time, priority = row
-        # Convert priority to integer if not None
-        priority = int(priority) if priority != 'None' else None
-        job_data.append({'pid': pid, 'arrival_time': int(arrival_time), 'burst_time': int(burst_time), 'priority': priority})
-
+        if len(row) == 3:
+            pid, arrival_time, burst_time = row
+            job_data.append({'pid': pid, 'arrival_time': int(arrival_time), 'burst_time': int(burst_time), 'priority': None})
+        else:
+            pid, arrival_time, burst_time, priority = row
+            priority = int(priority) if priority != 'None' else None
+            job_data.append({'pid': pid, 'arrival_time': int(arrival_time), 'burst_time': int(burst_time), 'priority': priority})
     print(job_data)
     algorithm = job_data[-1]['algorithm']
     scheduler = Scheduler()

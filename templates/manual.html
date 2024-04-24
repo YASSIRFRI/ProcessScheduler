@@ -77,20 +77,24 @@
                 </div>
                 <div class="form-group">
                     <label for="priority" class="priority-label" >Priority:</label>
-                    <input type="number" class="form-control priority-input" name="priority" min="1" disabled>
+                    <input type="number" class="form-control priority-input" name="priority" min="1" ${document.getElementById('algorithm').value === "Priority" ? '' : 'disabled'}>
                 </div>
             `;
             
             // Append the new process container to the processes container
             processesContainer.appendChild(newProcessContainer);
+    
+            // Enable priority input if algorithm is "Priority"
+            if (document.getElementById('algorithm').value === "Priority") {
+                newProcessContainer.querySelector('.priority-input').disabled = false;
+            }
         });
-
+    
         document.getElementById('algorithm').addEventListener('change', function() {
             const algorithm = this.value;
             const quantumField = document.getElementById('quantum-field');
-            const priorityLabels = document.querySelectorAll('.priority-label');
             const priorityInputs = document.querySelectorAll('.priority-input');
-
+    
             if (algorithm === "RR") {
                 quantumField.style.display = 'block';
                 priorityInputs.forEach(input => input.disabled = true);
@@ -102,7 +106,7 @@
                 priorityInputs.forEach(input => input.disabled = true);
             }
         });
-        
+    
         document.getElementById('process-form').addEventListener('submit', function(event) {
             event.preventDefault();
             console.log('Form submitted');
@@ -121,7 +125,7 @@
                     "pid": pid,
                     "arrival_time": arrivalTime,
                     "burst_time": burstTime,
-                    "priority": priority // Include priority in the data
+                    "priority": priority
                 };
                 processesData.push(processData);
             });
@@ -148,5 +152,6 @@
             });
         });
     </script>
+    
 </body>
 </html>
