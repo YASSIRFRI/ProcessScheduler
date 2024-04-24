@@ -91,4 +91,78 @@ class Priority(SchedulingAlgorithm):
             processes.remove(candidates[0])
         return names, start_times, duration
 
+
+class RR(SchedulingAlgorithm):
+    def __init__(self, time_quantum=None):
+        self.time_quantum = time_quantum
     
+    def schedule(self, processes):
+        n = len(processes)
+        queue = []
+        names = []
+        start_times = []
+        duration = []
+        remaining_burst_time = [process.burst_time for process in processes]
+        time = 0
+        
+        while True:
+            done = True
+            for i in range(n):
+                if remaining_burst_time[i] > 0:
+                    done = False
+                    
+                    if remaining_burst_time[i] > self.time_quantum:
+                        time += self.time_quantum
+                        remaining_burst_time[i] -= self.time_quantum
+                        names.append(processes[i].pid)
+                        start_times.append(time - self.time_quantum)
+                        duration.append(self.time_quantum)
+                    else:
+                        time += remaining_burst_time[i]
+                        remaining_burst_time[i] = 0
+                        names.append(processes[i].pid)
+                        start_times.append(time - remaining_burst_time[i])
+                        duration.append(remaining_burst_time[i])
+        
+            if done == True:
+                break
+        
+        return names, start_times, duration
+
+
+class PriorityRR(SchedulingAlgorithm):
+    def __init__(self, time_quantum=None):
+        self.time_quantum = time_quantum
+    
+    def schedule(self, processes):
+        n = len(processes)
+        queue = []
+        names = []
+        start_times = []
+        duration = []
+        remaining_burst_time = [process.burst_time for process in processes]
+        time = 0
+        
+        while True:
+            done = True
+            for i in range(n):
+                if remaining_burst_time[i] > 0:
+                    done = False
+                    
+                    if remaining_burst_time[i] > self.time_quantum:
+                        time += self.time_quantum
+                        remaining_burst_time[i] -= self.time_quantum
+                        names.append(processes[i].pid)
+                        start_times.append(time - self.time_quantum)
+                        duration.append(self.time_quantum)
+                    else:
+                        time += remaining_burst_time[i]
+                        remaining_burst_time[i] = 0
+                        names.append(processes[i].pid)
+                        start_times.append(time - remaining_burst_time[i])
+                        duration.append(remaining_burst_time[i])
+        
+            if done == True:
+                break
+        
+        return names, start_times, duration

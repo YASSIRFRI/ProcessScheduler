@@ -12,6 +12,8 @@ import SchedulingAlgorithm
 from SchedulingAlgorithm import FCFS as FCFS
 from SchedulingAlgorithm import SJF as SJF
 from SchedulingAlgorithm import Priority as Priority
+from SchedulingAlgorithm import PriorityRR as PriorityRR
+from SchedulingAlgorithm import RR as RR
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -29,6 +31,7 @@ def schedule():
     job_data = request.json
     print(job_data)
     algorithm = job_data[-1]['algorithm']
+    quantum = int(job_data[-1]['quantum'])
     scheduler = Scheduler()
     
     # Initialize the scheduling algorithm based on the selected algorithm
@@ -38,6 +41,10 @@ def schedule():
         algo=SJF()
     elif algorithm == 'Priority':
         algo=Priority()
+    elif algorithm == 'RR':
+         algo=RR(quantum)
+    elif algorithm == 'PriorityRR':
+        algo=PriorityRR(quantum)
     scheduler.set_algorithm(algo)
     
     
@@ -48,7 +55,7 @@ def schedule():
     durations = [job['burst_time'] for job in job_data]
     priorities = [job['priority'] for job in job_data]
     processes = [Process(name, int(arrival),int(duration)) for name, arrival, duration in zip(process_names, arrival_times, durations)]
-    if algorithm == 'Priority':
+    if algorithm == 'Priority' or algorithm == "PriorityRR":
         for process, priority in zip(processes, priorities):
             process.priority = int(priority)
     print(processes)
@@ -104,6 +111,9 @@ def processFile():
     algorithm = job_data[-1]['algorithm']
     scheduler = Scheduler()
     
+
+    # TODO: add round robin and priorityrr with quanta in constructor
+
     # Initialize the scheduling algorithm based on the selected algorithm
     if algorithm == 'FCFS':
         algo = FCFS()
