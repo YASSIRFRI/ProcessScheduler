@@ -70,7 +70,12 @@
                         <option value="SJF">Shortest Job First (SJF)</option>
                         <option value="Priority">Priority Scheduling</option>
                         <option value="RR">Round Robin (RR)</option>
+                        <option value="PriorityRR">Priority Scheduling with Round Robin (PriorityRR)</option>
                     </select>
+                </div>
+                <div class="form-group" id="quantaField" style="display: none;">
+                    <label for="quantaInput" >Quantum:</label>
+                    <input type="number" min="1" class="form-control" id="quantaInput" name="quantum">
                 </div>
                 <button type="submit" class="btn btn-primary">Upload</button>
             </form>
@@ -87,5 +92,17 @@
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    // Add event listener to the algorithm select element
+    document.getElementById('algorithmSelect').addEventListener('change', function() {
+        var selectedAlgorithm = this.value;
+        var quantaField = document.getElementById('quantaField');
+        if (selectedAlgorithm === 'RR' || selectedAlgorithm === 'PriorityRR') {
+            quantaField.style.display = 'block'; 
+        } else {
+            quantaField.style.display = 'none'; 
+        }
+    });
+</script>
 </body>
 </html>

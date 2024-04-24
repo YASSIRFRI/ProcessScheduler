@@ -85,7 +85,6 @@ def processFile():
         return redirect(request.url)
     
     try:
-        # Wrap the file stream in a TextIOWrapper to ensure it's opened in text mode
         file_wrapper = TextIOWrapper(file, encoding='utf-8')
 
         # Read CSV file
@@ -101,7 +100,6 @@ def processFile():
                     priority = int(priority) if priority != 'None' else None
                     job_data.append({'pid': pid, 'arrival_time': int(arrival_time), 'burst_time': int(burst_time), 'priority': priority})
             except ValueError:
-                # Handle ValueError for incorrect data format in CSV row
                 return "Error: Incorrect data format in CSV file."
 
         # Handle if CSV file has trailing newline characters
@@ -117,9 +115,12 @@ def processFile():
         algorithm = SJF()
     elif algorithm == 'Priority':
         algorithm = Priority()
+    elif algorithm == 'RR':
+        if request.form["quantum"]:
+            quantum = int(request.form["quantum"])
+        algorithm = RR(quantum)
     else:
         return algorithm
-
     scheduler.set_algorithm(algorithm)
     process_names = [job['pid'] for job in job_data]
     arrival_times = [job['arrival_time'] for job in job_data]
