@@ -35,8 +35,9 @@
                 <select class="form-control" id="algorithm" required>
                     <option value="FCFS">First Come, First Served (FCFS)</option>
                     <option value="SJF">Shortest Job First (SJF)</option>
-                    <option value="RR">Round Robin (RR)</option>
                     <option value="Priority">Priority Scheduling</option>
+                    <option value="RR">Round Robin (RR)</option>
+                    <option value="PriorityRR">Round Robin with Priority Scheduling</option>
                 </select>
             </div>
             <div id="quantum-field" style="display:none;" class="form-group">
@@ -58,6 +59,7 @@
             const processesContainer = document.getElementById('processes-container');
             
             // Create a new process container
+
             const newProcessContainer = document.createElement('div');
             newProcessContainer.classList.add('process-container');
             
@@ -77,7 +79,7 @@
                 </div>
                 <div class="form-group">
                     <label for="priority" class="priority-label" >Priority:</label>
-                    <input type="number" class="form-control priority-input" name="priority" min="1" ${document.getElementById('algorithm').value === "Priority" ? '' : 'disabled'}>
+                    <input type="number" class="form-control priority-input" name="priority" min="1" ${document.getElementById('algorithm').value === "Priority" || document.getElementById('algorithm').value === "PriorityRR" ? '' : 'disabled'}>
                 </div>
             `;
             
@@ -85,7 +87,8 @@
             processesContainer.appendChild(newProcessContainer);
     
             // Enable priority input if algorithm is "Priority"
-            if (document.getElementById('algorithm').value === "Priority") {
+            const algorithm = document.getElementById('algorithm').value
+            if (algorithm === "Priority" || algorithm === "PriorityRR") {
                 newProcessContainer.querySelector('.priority-input').disabled = false;
             }
         });
@@ -100,6 +103,9 @@
                 priorityInputs.forEach(input => input.disabled = true);
             } else if (algorithm === "Priority") {
                 quantumField.style.display = 'none';
+                priorityInputs.forEach(input => input.disabled = false);
+            } else if (algorithm === "PriorityRR") {
+                quantumField.style.display = 'block';
                 priorityInputs.forEach(input => input.disabled = false);
             } else {
                 quantumField.style.display = 'none';
@@ -120,6 +126,7 @@
                 const arrivalTime = container.querySelector('[name="arrival_time"]').value;
                 const burstTime = container.querySelector('[name="burst_time"]').value;
                 const priority = container.querySelector('[name="priority"]').value;
+                
         
                 const processData = {
                     "pid": pid,
@@ -129,8 +136,9 @@
                 };
                 processesData.push(processData);
             });
+            const quantum = document.querySelector('[name="quantum"]').value;
             console.log('Process data:', processesData);
-            processesData.push({"algorithm": algorithm}); 
+            processesData.push({"algorithm": algorithm, "quantum": quantum}); 
             fetch('/schedule', {
                 method: 'POST',
                 headers: {
