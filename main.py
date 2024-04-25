@@ -18,11 +18,10 @@ from SchedulingAlgorithm import RR as RR
 # Initialize Flask app
 app = Flask(__name__)
 
-# Initialize Dash app within Flask app
+
 dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/')
 dash_app.layout = html.Div(id='output')
 
-# Define route for submitting jobs
 
 #Shceduler should return : [proceses] [start_times] [durations]
 @app.route('/schedule', methods=['POST'])
@@ -63,23 +62,47 @@ def schedule():
     process_names,start_times,durations= scheduler.run()
     print(start_times)
     print('done')
-    tasks = []
-    for name, start, duration in zip(process_names, start_times, durations):
-        start = float(start)  # Convert start to float
-        tasks.append({'Task': name, 'Start': start, 'Finish': start + float(duration), 'Resource': name})  # Add 'Resource' key for legend
-    # Create Gantt chart using create_gantt() function
-    fig = ff.create_gantt(tasks, index_col='Task', title='Job Schedule', group_tasks=True, show_colorbar=True)
-    # Customize x-axis properties to remove time units and start from 0
-    fig.update_layout(xaxis_type='linear')
-    # Update Dash app layout with new Gantt chart
-    dash_app.layout = html.Div([
-        dcc.Graph(id='job-gantt-chart', figure=fig),
-    ])
+    #tasks = []
+    #for name, start, duration in zip(process_names, start_times, durations):
+        #start = float(start)  # Convert start to float
+        #tasks.append({'Task': name, 'Start': start, 'Finish': start + float(duration), 'Resource': name})  # Add 'Resource' key for legend
+    ## Create Gantt chart using create_gantt() function
+    #fig = ff.create_gantt(tasks, index_col='Task', title='Job Schedule', group_tasks=True, show_colorbar=True)
+    ## Customize x-axis properties to remove time units and start from 0
+    #fig.update_layout(xaxis_type='linear')
+    ## Update Dash app layout with new Gantt chart
+    #dash_app.layout = html.Div([
+        #dcc.Graph(id='job-gantt-chart', figure=fig),
+    #])
+    render(process_names, start_times, durations)
     return redirect(url_for('render_dashboard'))
 
+def render_gantt_chart(processes, start_times, durations,app_layout):
+    tasks = []
+    for name, start, duration in zip(processes, start_times, durations):
+        start = float(start)  # Convert start to float
+        tasks.append({'Task': name
+            , 'Start': start
+            , 'Finish': start + float(duration)
+            , 'Resource': name})
+    fig = ff.create_gantt(tasks, index_col='Task', title='Job Schedule', group_tasks=True, show_colorbar=True)
+    fig.update_layout(xaxis_type='linear')
+    app_layout.append(dcc.Graph(id='job-gantt-chart', figure=fig))
+    
+def add_header(app_layout):
+    header = html.H1("results", style={'color': 'blue', 'font-size': '32px', 'text-align': 'center'})
+    app_layout.append(header)
 
+def add_footer( app_layout):
+    footer = html.Footer("2024", style={'text-align': 'center', 'margin-top': '20px'})
+    app_layout.append(footer)
 
-
+def render(processes=[], start_times=[], durations=[]):
+    app_layout = []
+    add_header(app_layout)
+    render_gantt_chart(processes, start_times, durations, app_layout)
+    add_footer(app_layout)
+    dash_app.layout = html.Div(app_layout)
 
 @app.route('/upload', methods=['POST'])
 def processFile():
@@ -151,20 +174,7 @@ def processFile():
     scheduler.set_processes(processes)
 
     process_names, start_times, durations = scheduler.run()
-
-    tasks = []
-    for name, start, duration in zip(process_names, start_times, durations):
-        start = float(start)  # Convert start to float
-        tasks.append({'Task': name, 'Start': start, 'Finish': start + float(duration), 'Resource': name})  # Add 'Resource' key for legend
-
-    # Create Gantt chart using create_gantt() function
-    fig = ff.create_gantt(tasks, index_col='Task', title='Job Schedule', group_tasks=True, show_colorbar=True)
-    # Customize x-axis properties to remove time units and start from 0
-    fig.update_layout(xaxis_type='linear')
-    # Update Dash app layout with new Gantt chart
-    dash_app.layout = html.Div([
-        dcc.Graph(id='job-gantt-chart', figure=fig),
-    ])
+    render(process_names, start_times, durations)
     return redirect(url_for('render_dashboard'))
 
 

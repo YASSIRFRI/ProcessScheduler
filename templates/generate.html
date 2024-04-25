@@ -70,7 +70,7 @@
             <label for="num_processes">Number of Processes:</label>
             <input type="number" class="form-control" id="num_processes" required min="1">
         </div>
-        <button type="button" class="btn btn-primary mb-3" id="add-process-btn">Generate Processses</button>
+        <button type="button" class="btn btn-primary mb-3" id="add-process-btn">Generate Processes</button>
         <div id="processes-container">
             <table class="table">
                 <thead>
@@ -90,19 +90,22 @@
             <select class="form-control" id="algorithm" required>
                 <option value="FCFS">First Come, First Served (FCFS)</option>
                 <option value="SJF">Shortest Job First (SJF)</option>
-                <option value="RR">Round Robin (RR)</option>
                 <option value="Priority">Priority Scheduling</option>
+                <option value="PriorityRR">Round Robing with Priority</option>
+                <option value="RR">Round Robin (RR)</option>
             </select>
+        </div>
+        <div class="form-group" id="quantum-field" style="display: none;">
+            <label for="quantum">Quantum:</label>
+            <input type="number" class="form-control" id="quantum" min="1" required>
         </div>
         <button type="submit" class="btn btn-danger" id="submit-btn">Submit</button>
     </div>
-
     <footer class="footer">
         <div class="container text-center">
             <span>© 2024 Process Scheduling Algorithm</span>
         </div>
     </footer>
-
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
@@ -128,6 +131,19 @@
                 processesTableBody.insertAdjacentHTML('beforeend', row);
             }
         });
+        
+        document.getElementById('algorithm').addEventListener('change', function() {
+            const algorithm = this.value;
+            const quantumField = document.getElementById('quantum-field');
+            
+            // If RR or PriorityRR is selected, show the quantum field
+            if (algorithm === 'RR' || algorithm === 'PriorityRR') {
+                quantumField.style.display = 'block';
+            } else {
+                quantumField.style.display = 'none';
+            }
+        });
+
         document.getElementById('submit-btn').addEventListener('click', function() {
             const processesTableBody = document.getElementById('processes-table-body');
             const rows = processesTableBody.querySelectorAll('tr');
@@ -148,7 +164,17 @@
                 });
             });
             const algorithm = document.getElementById('algorithm').value;
-            processesData.push({"algorithm": algorithm}); // Add algorithm to the data
+            let requestBody = {
+                "algorithm": algorithm
+            };
+            
+            // If RR or PriorityRR is selected, include quantum in the request body
+            if (algorithm === 'RR' || algorithm === 'PriorityRR') {
+                const quantum = parseInt(document.getElementById('quantum').value);
+                requestBody.quantum = quantum;
+            }
+
+            processesData.push(requestBody);
             console.log('Processes Data:', processesData);
             fetch('/schedule', {
                 method: 'POST',
