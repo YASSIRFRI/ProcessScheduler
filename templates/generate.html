@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Submission Form</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        /* Custom styles */
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .navbar {
+            background-color: #28a745 !important;
+        }
+        .navbar-light .navbar-nav .nav-link {
+            color: #f8f9fa !important;
+        }
+        .footer {
+            background-color: #28a745;
+            color: #f8f9fa;
+            margin-top: auto;
+            width: 100%;
+        }
+        .process-container {
+            border:1px solid rgb(238, 224, 224);
+            padding: 16px;
+            margin: 8px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container">
+                <a class="navbar-brand" href="#">Process Scheduling Algorithm</a>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+    
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">File upload</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/manual">Manual Upload</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/generate">Randomly Generate</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#compare">Compare Algorithms</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="documentation.html">Documentation</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container mt-5">
+        <h2>Process Submission Form</h2>
+        <div class="form-group">
+            <label for="num_processes">Number of Processes:</label>
+            <input type="number" class="form-control" id="num_processes" required min="1">
+        </div>
+        <button type="button" class="btn btn-primary mb-3" id="add-process-btn">Generate Processses</button>
+        <div id="processes-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Process ID</th>
+                        <th>Arrival Time</th>
+                        <th>Burst Time</th>
+                        <th>Priority</th>
+                    </tr>
+                </thead>
+                <tbody id="processes-table-body">
+                </tbody>
+            </table>
+        </div>
+        <div class="form-group">
+            <label for="algorithm">Select Scheduling Algorithm:</label>
+            <select class="form-control" id="algorithm" required>
+                <option value="FCFS">First Come, First Served (FCFS)</option>
+                <option value="SJF">Shortest Job First (SJF)</option>
+                <option value="RR">Round Robin (RR)</option>
+                <option value="Priority">Priority Scheduling</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-danger" id="submit-btn">Submit</button>
+    </div>
+
+    <footer class="footer">
+        <div class="container text-center">
+            <span>© 2024 Process Scheduling Algorithm</span>
+        </div>
+    </footer>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        document.getElementById('add-process-btn').addEventListener('click', function() {
+            const numProcesses = parseInt(document.getElementById('num_processes').value);
+            const processesTableBody = document.getElementById('processes-table-body');
+            processesTableBody.innerHTML = ''; 
+            for (let i = 1; i <= numProcesses; i++) {
+                const pid = i;
+                const arrivalTime = Math.floor(Math.random() * 20); // Random arrival time between 0 and 19
+                const burstTime = Math.floor(Math.random() * 20) + 1; // Random burst time between 1 and 20
+                const priority = Math.floor(Math.random() * 10) + 1; // Random priority between 1 and 10
+                const row = `
+                    <tr>
+                        <td contenteditable="true">${pid}</td>
+                        <td contenteditable="true">${arrivalTime}</td>
+                        <td contenteditable="true">${burstTime}</td>
+                        <td contenteditable="true">${priority}</td>
+                    </tr>
+                `;
+                processesTableBody.insertAdjacentHTML('beforeend', row);
+            }
+        });
+        document.getElementById('submit-btn').addEventListener('click', function() {
+            const processesTableBody = document.getElementById('processes-table-body');
+            const rows = processesTableBody.querySelectorAll('tr');
+
+            const processesData = [];
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const pid = cells[0].innerText.trim();
+                const arrivalTime = parseInt(cells[1].innerText.trim());
+                const burstTime = parseInt(cells[2].innerText.trim());
+                const priority = parseInt(cells[3].innerText.trim());
+                
+                processesData.push({
+                    "pid": pid,
+                    "arrival_time": arrivalTime,
+                    "burst_time": burstTime,
+                    "priority": priority
+                });
+            });
+            const algorithm = document.getElementById('algorithm').value;
+            processesData.push({"algorithm": algorithm}); // Add algorithm to the data
+            console.log('Processes Data:', processesData);
+            fetch('/schedule', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(processesData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = response.url;
+                } else {
+                    throw new Error('Network response was not ok');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.'); // Show error message
+            });
+        });
+    </script>
+    
+</body>
+</html>

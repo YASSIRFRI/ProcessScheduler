@@ -30,9 +30,9 @@ def schedule():
     job_data = request.json
     print(job_data)
     algorithm = job_data[-1]['algorithm']
-    quantum = int(job_data[-1]['quantum'])
+    if(algorithm == 'RR' or algorithm == 'PriorityRR'):
+        quantum = int(job_data[-1]['quantum'])
     scheduler = Scheduler()
-    
     # Initialize the scheduling algorithm based on the selected algorithm
     if algorithm == 'FCFS':
         algo=FCFS()
@@ -178,6 +178,11 @@ def index():
 @app.route('/manual')
 def manual():
     return render_template('manual.html')
+
+
+@app.route('/generate')
+def random():
+    return render_template('generate.html')
 
 @app.route('/dashboard/')
 def render_dashboard():
