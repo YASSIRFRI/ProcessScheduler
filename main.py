@@ -2,6 +2,7 @@ from flask import Flask, request, render_template, redirect, url_for
 import dash
 from dash import dcc, html
 import plotly.figure_factory as ff
+import plotly.colors
 import json
 import csv
 from Process import Process
@@ -14,6 +15,7 @@ from SchedulingAlgorithm import SJF as SJF
 from SchedulingAlgorithm import Priority as Priority
 from SchedulingAlgorithm import PriorityRR as PriorityRR
 from SchedulingAlgorithm import RR as RR
+import hashlib
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -77,15 +79,21 @@ def schedule():
     render(process_names, start_times, durations)
     return redirect(url_for('render_dashboard'))
 
-def render_gantt_chart(processes, start_times, durations,app_layout):
+def generate_color(process_name):
+    # Generate a unique color for each process name using a hash function
+    hash_object = hashlib.sha256(process_name.encode())
+    hex_dig = hash_object.hexdigest()[:6]  # Take the first 6 characters of the hash as hex color code
+    return '#' + hex_dig
+
+def render_gantt_chart(processes, start_times, durations, app_layout):
     tasks = []
-    for name, start, duration in zip(processes, start_times, durations):
+    # Generate a custom color for each process name
+    colors = [generate_color(process_name) for process_name in processes]
+    for name, start, duration, color in zip(processes, start_times, durations, colors):
         start = float(start)  # Convert start to float
-        tasks.append({'Task': name
-            , 'Start': start
-            , 'Finish': start + float(duration)
-            , 'Resource': name})
-    fig = ff.create_gantt(tasks, index_col='Task', title='Job Schedule', group_tasks=True, show_colorbar=True)
+        tasks.append({'Task': name, 'Start': start, 'Finish': start + float(duration), 'Resource': name})
+    # Update the color attribute to use custom colors
+    fig = ff.create_gantt(tasks, index_col='Task', title='Job Schedule', group_tasks=True, show_colorbar=True, colors=colors)
     fig.update_layout(xaxis_type='linear')
     app_layout.append(dcc.Graph(id='job-gantt-chart', figure=fig))
     
