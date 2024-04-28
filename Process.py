@@ -4,6 +4,7 @@ class Process:
         self.arrival_time = arrival_time
         self.burst_time = burst_time
         self.remaining_time = burst_time
+        self.start_time = None
         self.waiting_time = 0
         self.turnaround_time = 0
         self.priority = priority
@@ -44,6 +45,11 @@ class Process:
         if "turnaround_time" in data:
             self.turnaround_time = data["turnaround_time"]
         return self
+    
+    
+    def setStartTime(self, time):
+        self.start_time = time
+        
     
     
     

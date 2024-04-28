@@ -29,7 +29,6 @@ app = Flask(__name__)
 
 dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/',external_stylesheets=[dbc.themes.BOOTSTRAP])
 dash_app.layout = html.Div(id='output')
-colors=[]
 
 
 #Shceduler should return : [proceses] [start_times] [durations]
@@ -75,20 +74,16 @@ def schedule():
 
 def generate_color(process_name):
     hash_object = hashlib.sha256(process_name.encode())
-    hex_dig = hash_object.hexdigest()[:6]  # Take the first 6 characters of the hash as hex color code
+    hex_dig = hash_object.hexdigest()[:6]
     return '#' + hex_dig
 
 
-def render_turnaround_time_chart(processes, start_times, arrival_times, durations, app_layout):
-    # Calculate turnaround times for each process
+def render_turnaround_time_chart(processes, start_times, durations, arrival_times, app_layout):
     turnaround_times = [abs(arrival - start) + duration for start, arrival, duration in zip(arrival_times, start_times, durations)]
-    # Get unique process names and their corresponding colors
-    unique_process_names = set(processes)
-    color_dict = {process: generate_color(process) for process in unique_process_names}
-    # Generate data for bar plot using provided colors
+    colors=[generate_color(process_name) for process_name in processes]
+    print(colors)
     data = []
-    for process, turnaround_time in zip(processes, turnaround_times):
-        color = color_dict[process]
+    for process, turnaround_time,color in zip(processes, turnaround_times,colors):
         data.append(go.Bar(x=[process], y=[turnaround_time], name=process, marker=dict(color=color)))
     layout = go.Layout(
         title='Turnaround Time for Each Process',
@@ -107,34 +102,35 @@ def render_gantt_chart(processes, start_times, durations, app_layout):
     # Generate a custom color for each process name
     #unique_process_names = set(processes)
     colors = [generate_color(process_name) for process_name in processes]
+    color_dict = {process: color for process, color in zip(processes, colors)} 
+    print(colors)
     for name, start, duration, color in zip(processes, start_times, durations, colors):
         start = float(start)  # Convert start to float
         tasks.append({'Task': name, 'Start': start, 'Finish': start + float(duration), 'Resource': name})
     # Update the color attribute to use custom colors
-    fig = ff.create_gantt(tasks, index_col='Task', title='Job Schedule', group_tasks=True, show_colorbar=True, colors=colors)
+    fig = ff.create_gantt(tasks, index_col='Task', title='Job Schedule', group_tasks=True, show_colorbar=True, colors=color_dict)
     fig.update_layout(xaxis_type='linear')
     app_layout.append(dcc.Graph(id='job-gantt-chart', figure=fig))
     
     
-def render_process_table(processes, start_times, arrival_times, durations, app_layout):
+def render_process_table(processes, start_times, durations,arrival_times, app_layout):
     # Calculate turnaround times for each process
-    turnaround_times = [abs(arrival - start) + duration for start, arrival, duration in zip(start_times, arrival_times, durations)]
-    # Calculate average turnaround time
-    average_turnaround_time = sum(turnaround_times) / len(turnaround_times)
-
+    turnaround_times = [abs(arrival - start) + duration for start, arrival, duration in zip(arrival_times, start_times, durations)]
+    average_turnaround_time = sum(turnaround_times)/len(turnaround_times)
     data = {
         "Process": processes,
-        "Arrival Time": arrival_times,
         "Start Time": start_times,
         "Duration": durations,
+        "Arrival Time": arrival_times,
         "Turnaround Time": turnaround_times  # Include turnaround times in the data
     }
+    
     table = dash_table.DataTable(
         id='process-table',
         columns=[{"name": i, "id": i} for i in data.keys()],
         data=[{k: v for k, v in zip(data.keys(), row)} for row in zip(*data.values())] # Modified line
     )
-    # Append average turnaround time to the layout
+    
     app_layout.append(html.Div([
         table,
         html.P(f"Average Turnaround Time: {average_turnaround_time}")
@@ -180,8 +176,8 @@ def render(processes=[], start_times=[], durations=[], arrival_times=[]):
     app_layout = []
     add_header(app_layout)
     render_gantt_chart(processes, start_times, durations, app_layout)
-    render_turnaround_time_chart(processes, start_times, arrival_times,durations, app_layout)
-    render_process_table(processes, start_times, arrival_times, durations, app_layout)
+    render_turnaround_time_chart(processes, start_times,durations,arrival_times, app_layout)
+    render_process_table(processes, start_times, durations,arrival_times, app_layout)
     add_footer(app_layout)
     dash_app.layout = html.Div(app_layout)
 
