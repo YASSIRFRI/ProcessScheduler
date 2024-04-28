@@ -31,7 +31,6 @@ app = Flask(__name__)
 dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/',external_stylesheets=[dbc.themes.BOOTSTRAP])
 dash_app.layout = html.Div(id='output')
 
-
 #Shceduler should return : [proceses] [start_times] [durations]
 @app.route('/schedule', methods=['POST'])
 def schedule():
@@ -55,7 +54,7 @@ def schedule():
     scheduler.set_algorithm(algo)
     job_data.pop() # Remove the scheduling algorithm from the job data
     process_names = [job['pid'] for job in job_data]
-    arrival_times = {job['pid']: job['arrival_time'] for job in job_data}
+    arrival_times = [job['arrival_time'] for job in job_data]
     durations = [job['burst_time'] for job in job_data]
     priorities = [job['priority'] for job in job_data]
     processes = [Process(name, int(arrival),int(duration)) for name, arrival, duration in zip(process_names, arrival_times, durations)]
@@ -66,8 +65,8 @@ def schedule():
     scheduler.set_processes(processes)
     process_names,start_times,durations= scheduler.run()
     print(start_times)
-    print('done')
-    render(process_names, start_times, durations, arrival_times)
+    arrival_time_dict = {name: arrival for name, arrival in zip(process_names, arrival_times)}
+    render(process_names, start_times, durations, arrival_time_dict)
     return redirect(url_for('render_dashboard'))
 
 def generate_color(process_name):
@@ -82,6 +81,8 @@ def render_turnaround_time_chart(processes, start_times, durations, arrival_time
         for i in range(len(processes)):
             if processes[i]==p:
                 termination_times[p]=max(start_times[i]+durations[i],termination_times[p])
+    print(termination_times)
+    print(arrival_times)
     turnaround_times = {process: termination_times[process] - arrival_times[process] for process in processes}
     colors={process:generate_color(process) for process in processes}
     data = []
@@ -260,13 +261,13 @@ def processFile():
     scheduler.set_algorithm(algorithm)
     process_names = [job['pid'] for job in job_data]
     arrival_times = [job['arrival_time'] for job in job_data]
+    arrival_time_dict = {name: arrival for name, arrival in zip(process_names, arrival_times)}
     durations = [job['burst_time'] for job in job_data]
     priorities = [job['priority'] for job in job_data]
     processes = [Process(name, int(arrival), int(duration), priority=priority) for name, arrival, duration, priority in zip(process_names, arrival_times, durations, priorities)]
     scheduler.set_processes(processes)
     process_names, start_times, durations = scheduler.run()
-    print(process_names)
-    arrival_time_dict = {process.pid: process.arrival_time for process in processes}
+    print("Arrival Time Dict: ", arrival_time_dict)
     render(process_names, start_times, durations, arrival_time_dict)
     return redirect(url_for('render_dashboard'))
 
