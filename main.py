@@ -57,7 +57,7 @@ def schedule():
     job_data.pop() # Remove the scheduling algorithm from the job data
     
     process_names = [job['pid'] for job in job_data]
-    arrival_times = [job['arrival_time'] for job in job_data]
+    arrival_times = {job['pid']: job['arrival_time'] for job in job_data}
     durations = [job['burst_time'] for job in job_data]
     priorities = [job['priority'] for job in job_data]
     processes = [Process(name, int(arrival),int(duration)) for name, arrival, duration in zip(process_names, arrival_times, durations)]
@@ -79,11 +79,10 @@ def generate_color(process_name):
 
 
 def render_turnaround_time_chart(processes, start_times, durations, arrival_times, app_layout):
-    turnaround_times = [abs(arrival - start) + duration for start, arrival, duration in zip(arrival_times, start_times, durations)]
-    colors=[generate_color(process_name) for process_name in processes]
-    print(colors)
+    turnaround_times = [abs(arrival_times[process] - start) + duration for start, duration, process in zip(start_times, durations, processes)]
+    colors = [generate_color(process_name) for process_name in processes]
     data = []
-    for process, turnaround_time,color in zip(processes, turnaround_times,colors):
+    for process, turnaround_time, color in zip(processes, turnaround_times, colors):
         data.append(go.Bar(x=[process], y=[turnaround_time], name=process, marker=dict(color=color)))
     layout = go.Layout(
         title='Turnaround Time for Each Process',
@@ -96,8 +95,7 @@ def render_turnaround_time_chart(processes, start_times, durations, arrival_time
 
     
     
-    
-def render_gantt_chart(processes, start_times, durations, app_layout):
+def render_gantt_chart(processes, start_times, durations, app_layout,algorithm=None):
     tasks = []
     # Generate a custom color for each process name
     #unique_process_names = set(processes)
@@ -108,27 +106,28 @@ def render_gantt_chart(processes, start_times, durations, app_layout):
         start = float(start)  # Convert start to float
         tasks.append({'Task': name, 'Start': start, 'Finish': start + float(duration), 'Resource': name})
     # Update the color attribute to use custom colors
-    fig = ff.create_gantt(tasks, index_col='Task', title='Job Schedule', group_tasks=True, show_colorbar=True, colors=color_dict)
+    title='Job Scheduling Gantt Chart'
+    fig = ff.create_gantt(tasks, index_col='Task', title=title, group_tasks=True, show_colorbar=True, colors=color_dict)
     fig.update_layout(xaxis_type='linear')
     app_layout.append(dcc.Graph(id='job-gantt-chart', figure=fig))
     
     
-def render_process_table(processes, start_times, durations,arrival_times, app_layout):
-    # Calculate turnaround times for each process
-    turnaround_times = [abs(arrival - start) + duration for start, arrival, duration in zip(arrival_times, start_times, durations)]
-    average_turnaround_time = sum(turnaround_times)/len(turnaround_times)
+def render_process_table(processes, start_times, durations, arrival_times, app_layout):
+    turnaround_times = [abs(arrival_times[process] - start) + duration for start, duration, process in zip(start_times, durations, processes)]
+    average_turnaround_time = sum(turnaround_times) / len(turnaround_times)
+    
     data = {
         "Process": processes,
         "Start Time": start_times,
         "Duration": durations,
-        "Arrival Time": arrival_times,
-        "Turnaround Time": turnaround_times  # Include turnaround times in the data
+        "Arrival Time": [arrival_times[process] for process in processes],  # Fetch arrival time from the dictionary
+        "Turnaround Time": turnaround_times
     }
     
     table = dash_table.DataTable(
         id='process-table',
         columns=[{"name": i, "id": i} for i in data.keys()],
-        data=[{k: v for k, v in zip(data.keys(), row)} for row in zip(*data.values())] # Modified line
+        data=[{k: v for k, v in zip(data.keys(), row)} for row in zip(*data.values())]
     )
     
     app_layout.append(html.Div([
@@ -160,6 +159,17 @@ def add_header(app_layout):
                     id="navbar-collapse",
                     is_open=False,
                     navbar=True,
+                    children=[
+                        dbc.Nav(
+                            [
+                                dbc.NavItem(dbc.NavLink("Manualy generate", href="/manual")),
+                                dbc.NavItem(dbc.NavLink("Randomly generate", href="/manual")),
+                                dbc.NavItem(dbc.NavLink("File upload", href="/upload")),
+                                dbc.NavItem(dbc.NavLink("Compare algorithms", href="/compare")),
+                            ],
+                            navbar=True,
+                        )
+                    ]
                 ),
             ]
         ),
@@ -168,11 +178,13 @@ def add_header(app_layout):
     )
     app_layout.append(header)
 
+
 def add_footer(app_layout):
-    footer = html.Footer("2024", className="footer text-center")
+    footer = html.Footer("Process Scheduling Visualizer 2024", className="footer text-center fixed-bottom bg-dark text-light")
     app_layout.append(footer)
 
-def render(processes=[], start_times=[], durations=[], arrival_times=[]):
+
+def render(processes=[], start_times=[], durations=[], arrival_times={}):
     app_layout = []
     add_header(app_layout)
     render_gantt_chart(processes, start_times, durations, app_layout)
@@ -186,11 +198,8 @@ def processFile():
     if 'file' not in request.files:
         return redirect(request.url)
     file = request.files['file']
-    
-    # Check if the file is empty
     if file.filename == '':
         return redirect(request.url)
-    
     try:
         file_wrapper = TextIOWrapper(file, encoding='utf-8')
 
@@ -232,13 +241,11 @@ def processFile():
         return algorithm
     scheduler.set_algorithm(algorithm)
     process_names = [job['pid'] for job in job_data]
-    arrival_times = [job['arrival_time'] for job in job_data]
+    arrival_times = {job['pid']: job['arrival_time'] for job in job_data}
     durations = [job['burst_time'] for job in job_data]
     priorities = [job['priority'] for job in job_data]
     processes = [Process(name, int(arrival), int(duration), priority=priority) for name, arrival, duration, priority in zip(process_names, arrival_times, durations, priorities)]
-
     scheduler.set_processes(processes)
-
     process_names, start_times, durations = scheduler.run()
     render(process_names, start_times, durations, arrival_times)
     return redirect(url_for('render_dashboard'))

@@ -2,13 +2,23 @@ from abc import ABC, abstractmethod
 
 class SchedulingAlgorithm(ABC):
 
+    
+    def __init__(self):
+        pass
+    
     @abstractmethod
     def schedule(self, processes):
         raise NotImplementedError
     
+    
 
 
 class FCFS(SchedulingAlgorithm):
+    
+    
+    def __init__(self):
+        self.name = "First-Come, First-Served"
+        
     def schedule(self, processes):
         # Sort processes by arrival time
         #print the type of variable arrial_time
@@ -31,6 +41,10 @@ class FCFS(SchedulingAlgorithm):
 
 
 class SJF(SchedulingAlgorithm):
+    
+    def __init__(self):
+        self.name = "Shortest Job First"
+        
     def schedule(self, processes):
         n= len(processes)
         processes.sort(key=lambda process: (process.arrival_time, process.burst_time))
@@ -62,6 +76,12 @@ class SJF(SchedulingAlgorithm):
 class Priority(SchedulingAlgorithm):
     
     """Priority scheduling algorithm"""
+    
+    
+    def __init__(self):
+        self.name = "Priority Scheduling"
+        
+        
     def schedule(self, processes):
         n= len(processes)
         processes.sort(key=lambda process: (process.arrival_time, -process.priority))
@@ -95,6 +115,7 @@ class Priority(SchedulingAlgorithm):
 class RR(SchedulingAlgorithm):
     def __init__(self, time_quantum):
         self.time_quantum = time_quantum
+        self.name = "Round Robin Scheduling"
 
     def schedule(self, processes):
         remaining_time = [process.burst_time for process in processes]
@@ -116,7 +137,7 @@ class RR(SchedulingAlgorithm):
 class PriorityRR(SchedulingAlgorithm):
     def __init__(self, time_quantum):
         self.time_quantum = time_quantum
-
+        self .name = "Priority Round Robin Scheduling"
     def schedule(self, processes):
         remaining_time = [process.burst_time for process in processes]
         current_priorities = [process.priority for process in processes]
