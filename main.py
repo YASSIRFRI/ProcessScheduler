@@ -75,7 +75,36 @@ def generate_color(process_name):
     return '#' + hex_dig
 
 
+
+
+def render_gantt_chart(processes, start_times, durations, app_layout,algorithm=None):
+    tasks = []
+    # Generate a custom color for each process name
+    #unique_process_names = set(processes)
+    colors = [generate_color(process_name) for process_name in processes]
+    color_dict = {process: color for process, color in zip(processes, colors)} 
+    print(colors)
+    for name, start, duration, color in zip(processes, start_times, durations, colors):
+        start = float(start)  # Convert start to float
+        tasks.append({'Task': name, 'Start': start, 'Finish': start + float(duration), 'Resource': name})
+    # Update the color attribute to use custom colors
+    title='Job Scheduling Gantt Chart'
+    fig = ff.create_gantt(tasks, index_col='Task', title=title, group_tasks=True, show_colorbar=True, colors=color_dict)
+    fig.update_layout(xaxis_type='linear')
+    app_layout.append(dcc.Graph(id='job-gantt-chart', figure=fig))
+
+
+
 def render_turnaround_time_chart(processes, start_times, durations, arrival_times, app_layout):
+
+    print("########################################")
+    print("turnaround time chart info:")
+    print(processes)
+    print(start_times)
+    print(durations)
+    print(arrival_times)
+    print("########################################")
+
     termination_times={processes[i]:0 for i in range(len(processes))}
     for p in processes:
         for i in range(len(processes)):
@@ -97,26 +126,19 @@ def render_turnaround_time_chart(processes, start_times, durations, arrival_time
     fig = go.Figure(data=data, layout=layout)
     app_layout.append(dcc.Graph(id='waiting-time-chart', figure=fig))
 
-    
-    
-def render_gantt_chart(processes, start_times, durations, app_layout,algorithm=None):
-    tasks = []
-    # Generate a custom color for each process name
-    #unique_process_names = set(processes)
-    colors = [generate_color(process_name) for process_name in processes]
-    color_dict = {process: color for process, color in zip(processes, colors)} 
-    print(colors)
-    for name, start, duration, color in zip(processes, start_times, durations, colors):
-        start = float(start)  # Convert start to float
-        tasks.append({'Task': name, 'Start': start, 'Finish': start + float(duration), 'Resource': name})
-    # Update the color attribute to use custom colors
-    title='Job Scheduling Gantt Chart'
-    fig = ff.create_gantt(tasks, index_col='Task', title=title, group_tasks=True, show_colorbar=True, colors=color_dict)
-    fig.update_layout(xaxis_type='linear')
-    app_layout.append(dcc.Graph(id='job-gantt-chart', figure=fig))
-    
-    
+
+
+
 def render_process_table(processes, start_times, durations, arrival_times, app_layout):
+
+    print("########################################")
+    print("process table info:")
+    print(processes)
+    print(start_times)
+    print(durations)
+    print(arrival_times)
+    print("########################################")
+
     # Calculate start times and durations for each process
     start_time_dict = {process: start_times[i] for i, process in enumerate(processes)}
     durations_dict = {process: 0 for process in processes}
@@ -124,10 +146,11 @@ def render_process_table(processes, start_times, durations, arrival_times, app_l
         start_time_dict[process] = min(start_time_dict[process], start_times[i])
         durations_dict[process] += durations[i]
 
-    # Calculate termination times for each process
-    termination_times = {process: 0 for process in processes}
-    for i, p in enumerate(processes):
-        termination_times[p] = max(start_times[i] + durations[i], termination_times[p])
+    termination_times={processes[i]:0 for i in range(len(processes))}
+    for p in processes:
+        for i in range(len(processes)):
+            if processes[i]==p:
+                termination_times[p]=max(start_times[i]+durations[i],termination_times[p])
 
     # Calculate turnaround times for each process
     turnaround_times = {process: termination_times[process] - arrival_times[process] for process in processes}
@@ -135,12 +158,15 @@ def render_process_table(processes, start_times, durations, arrival_times, app_l
     # Generate colors for each process
     colors = {process: generate_color(process) for process in processes}
 
+    processes = list(set(processes))
+
     # Prepare data for the table
     data = {
         "Process": processes,
-        "Start Time": [start_time_dict[process] for process in processes],
-        "Duration": [durations_dict[process] for process in processes],
         "Arrival Time": [arrival_times[process] for process in processes],
+        "Burst Time": [durations_dict[process] for process in processes],
+        "Start Time": [start_time_dict[process] for process in processes],
+        "Finish Time": [turnaround_times[process] + arrival_times[process] for process in processes],
         "Turnaround Time": [turnaround_times[process] for process in processes]
     }
 
@@ -152,7 +178,6 @@ def render_process_table(processes, start_times, durations, arrival_times, app_l
         html.Div(table, className="p-4"),  # Add padding
         html.P(f"Average Turnaround Time: {sum(turnaround_times.values()) / len(turnaround_times)}", className="p-4")
     ]))
-
 
 
 
@@ -276,13 +301,15 @@ def processFile():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('documentation.html')
 
+@app.route('/file')
+def fileu():
+    return render_template('file.html')
 
 @app.route('/manual')
 def manual():
     return render_template('manual.html')
-
 
 @app.route('/generate')
 def random():
@@ -291,6 +318,14 @@ def random():
 @app.route('/dashboard/')
 def render_dashboard():
     return dash_app.index()
+
+@app.route('/compare')
+def compare():
+    return render_template('compare.html')
+
+@app.route('/documentation')
+def documentation():
+    return render_template('documentation.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
