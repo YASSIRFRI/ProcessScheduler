@@ -1,6 +1,7 @@
 from flask import Flask, request, render_template, redirect, url_for
 import dash
 from dash import dcc, html, dash_table
+import pandas as pd
 import plotly.figure_factory as ff
 import plotly.colors
 import json
@@ -52,10 +53,7 @@ def schedule():
     elif algorithm == 'PriorityRR':
         algo=PriorityRR(quantum)
     scheduler.set_algorithm(algo)
-    
-    
     job_data.pop() # Remove the scheduling algorithm from the job data
-    
     process_names = [job['pid'] for job in job_data]
     arrival_times = {job['pid']: job['arrival_time'] for job in job_data}
     durations = [job['burst_time'] for job in job_data]
@@ -79,11 +77,16 @@ def generate_color(process_name):
 
 
 def render_turnaround_time_chart(processes, start_times, durations, arrival_times, app_layout):
-    turnaround_times = [abs(arrival_times[process] - start) + duration for start, duration, process in zip(start_times, durations, processes)]
-    colors = [generate_color(process_name) for process_name in processes]
+    termination_times={processes[i]:0 for i in range(len(processes))}
+    for p in processes:
+        for i in range(len(processes)):
+            if processes[i]==p:
+                termination_times[p]=max(start_times[i]+durations[i],termination_times[p])
+    turnaround_times = {process: termination_times[process] - arrival_times[process] for process in processes}
+    colors={process:generate_color(process) for process in processes}
     data = []
-    for process, turnaround_time, color in zip(processes, turnaround_times, colors):
-        data.append(go.Bar(x=[process], y=[turnaround_time], name=process, marker=dict(color=color)))
+    for p in turnaround_times:
+        data.append(go.Bar(name=p, x=[p], y=[turnaround_times[p]], marker_color=colors[p]))
     layout = go.Layout(
         title='Turnaround Time for Each Process',
         xaxis=dict(title='Process'),
@@ -113,27 +116,42 @@ def render_gantt_chart(processes, start_times, durations, app_layout,algorithm=N
     
     
 def render_process_table(processes, start_times, durations, arrival_times, app_layout):
-    turnaround_times = [abs(arrival_times[process] - start) + duration for start, duration, process in zip(start_times, durations, processes)]
-    average_turnaround_time = sum(turnaround_times) / len(turnaround_times)
-    
+    # Calculate start times and durations for each process
+    start_time_dict = {process: start_times[i] for i, process in enumerate(processes)}
+    durations_dict = {process: 0 for process in processes}
+    for i, process in enumerate(processes):
+        start_time_dict[process] = min(start_time_dict[process], start_times[i])
+        durations_dict[process] += durations[i]
+
+    # Calculate termination times for each process
+    termination_times = {process: 0 for process in processes}
+    for i, p in enumerate(processes):
+        termination_times[p] = max(start_times[i] + durations[i], termination_times[p])
+
+    # Calculate turnaround times for each process
+    turnaround_times = {process: termination_times[process] - arrival_times[process] for process in processes}
+
+    # Generate colors for each process
+    colors = {process: generate_color(process) for process in processes}
+
+    # Prepare data for the table
     data = {
         "Process": processes,
-        "Start Time": start_times,
-        "Duration": durations,
-        "Arrival Time": [arrival_times[process] for process in processes],  # Fetch arrival time from the dictionary
-        "Turnaround Time": turnaround_times
+        "Start Time": [start_time_dict[process] for process in processes],
+        "Duration": [durations_dict[process] for process in processes],
+        "Arrival Time": [arrival_times[process] for process in processes],
+        "Turnaround Time": [turnaround_times[process] for process in processes]
     }
-    
-    table = dash_table.DataTable(
-        id='process-table',
-        columns=[{"name": i, "id": i} for i in data.keys()],
-        data=[{k: v for k, v in zip(data.keys(), row)} for row in zip(*data.values())]
-    )
-    
+
+    # Create the DataTable with Bootstrap stripped table and padding
+    table = dbc.Table.from_dataframe(pd.DataFrame(data), striped=True, bordered=True, hover=True)
+
+    # Append the table and average turnaround time to the layout
     app_layout.append(html.Div([
-        table,
-        html.P(f"Average Turnaround Time: {average_turnaround_time}")
+        html.Div(table, className="p-4"),  # Add padding
+        html.P(f"Average Turnaround Time: {sum(turnaround_times.values()) / len(turnaround_times)}", className="p-4")
     ]))
+
 
 
 
@@ -241,13 +259,15 @@ def processFile():
         return algorithm
     scheduler.set_algorithm(algorithm)
     process_names = [job['pid'] for job in job_data]
-    arrival_times = {job['pid']: job['arrival_time'] for job in job_data}
+    arrival_times = [job['arrival_time'] for job in job_data]
     durations = [job['burst_time'] for job in job_data]
     priorities = [job['priority'] for job in job_data]
     processes = [Process(name, int(arrival), int(duration), priority=priority) for name, arrival, duration, priority in zip(process_names, arrival_times, durations, priorities)]
     scheduler.set_processes(processes)
     process_names, start_times, durations = scheduler.run()
-    render(process_names, start_times, durations, arrival_times)
+    print(process_names)
+    arrival_time_dict = {process.pid: process.arrival_time for process in processes}
+    render(process_names, start_times, durations, arrival_time_dict)
     return redirect(url_for('render_dashboard'))
 
 
