@@ -114,24 +114,46 @@ class Priority(SchedulingAlgorithm):
 
 class RR(SchedulingAlgorithm):
     def __init__(self, time_quantum):
-        self.time_quantum = time_quantum
+        self.quantum = time_quantum
         self.name = "Round Robin Scheduling"
-
+        
     def schedule(self, processes):
-        remaining_time = [process.burst_time for process in processes]
+        processes.sort(key=lambda process: process.arrival_time)
+        n = len(processes)
+        queue = []
         names = []
         start_times = []
         duration = []
-        current_time = 0
-        while any(remaining_time):
-            for i in range(len(processes)):
-                if remaining_time[i] > 0:
-                    execute_time = min(self.time_quantum, remaining_time[i])
-                    names.append(processes[i].pid)
-                    start_times.append(current_time)
-                    duration.append(execute_time)
-                    remaining_time[i] -= execute_time
-                    current_time += execute_time
+        for i in range(n):
+            processes[i].remaining_time = processes[i].burst_time
+        time_to_next = processes[0].arrival_time
+        queue.append(processes[0])
+        next_idx=1
+        while len(queue)>0:
+            in_queue = queue.pop(0)
+            names.append(in_queue.pid)
+            start_times.append(time_to_next)
+            if in_queue.remaining_time> self.quantum:
+                duration.append(self.quantum)
+                in_queue.remaining_time-=self.quantum
+                time_to_next+=self.quantum
+            else:
+                duration.append(in_queue.remaining_time)
+                time_to_next+=in_queue.remaining_time
+                in_queue.remaining_time = 0
+            to_enqueue=[]
+            while next_idx<n and processes[next_idx].arrival_time<=time_to_next:
+                to_enqueue.append(processes[next_idx])
+                next_idx+=1
+            queue.extend(to_enqueue)
+            if in_queue.remaining_time>0:
+                queue.append(in_queue)
+            else: 
+                if len(queue)==0:
+                    if next_idx<n:
+                        queue.append(processes[next_idx])
+                        time_to_next=processes[next_idx].arrival_time
+                        next_idx+=1
         return names, start_times, duration
 
 class PriorityRR(SchedulingAlgorithm):
