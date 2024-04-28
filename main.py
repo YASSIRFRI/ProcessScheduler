@@ -52,9 +52,10 @@ def schedule():
     elif algorithm == 'PriorityRR':
         algo=PriorityRR(quantum)
     scheduler.set_algorithm(algo)
-    job_data.pop() # Remove the scheduling algorithm from the job data
+    job_data.pop()
     process_names = [job['pid'] for job in job_data]
     arrival_times = [job['arrival_time'] for job in job_data]
+    arrival_time_dict = {name: arrival for name, arrival in zip(process_names, arrival_times)}
     durations = [job['burst_time'] for job in job_data]
     priorities = [job['priority'] for job in job_data]
     processes = [Process(name, int(arrival),int(duration)) for name, arrival, duration in zip(process_names, arrival_times, durations)]
@@ -65,7 +66,6 @@ def schedule():
     scheduler.set_processes(processes)
     process_names,start_times,durations= scheduler.run()
     print(start_times)
-    arrival_time_dict = {name: arrival for name, arrival in zip(process_names, arrival_times)}
     render(process_names, start_times, durations, arrival_time_dict)
     return redirect(url_for('render_dashboard'))
 
