@@ -31,43 +31,7 @@ app = Flask(__name__)
 dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/',external_stylesheets=[dbc.themes.BOOTSTRAP])
 dash_app.layout = html.Div(id='output')
 
-#Shceduler should return : [proceses] [start_times] [durations]
-@app.route('/schedule', methods=['POST'])
-def schedule():
-    job_data = request.json
-    print(job_data)
-    algorithm = job_data[-1]['algorithm']
-    if(algorithm == 'RR' or algorithm == 'PriorityRR'):
-        quantum = int(job_data[-1]['quantum'])
-    scheduler = Scheduler()
-    # Initialize the scheduling algorithm based on the selected algorithm
-    if algorithm == 'FCFS':
-        algo=FCFS()
-    elif algorithm == 'SJF':
-        algo=SJF()
-    elif algorithm == 'Priority':
-        algo=Priority()
-    elif algorithm == 'RR':
-         algo=RR(quantum)
-    elif algorithm == 'PriorityRR':
-        algo=PriorityRR(quantum)
-    scheduler.set_algorithm(algo)
-    job_data.pop()
-    process_names = [job['pid'] for job in job_data]
-    arrival_times = [job['arrival_time'] for job in job_data]
-    arrival_time_dict = {name: arrival for name, arrival in zip(process_names, arrival_times)}
-    durations = [job['burst_time'] for job in job_data]
-    priorities = [job['priority'] for job in job_data]
-    processes = [Process(name, int(arrival),int(duration)) for name, arrival, duration in zip(process_names, arrival_times, durations)]
-    if algorithm == 'Priority' or algorithm == "PriorityRR":
-        for process, priority in zip(processes, priorities):
-            process.priority = int(priority)
-    print(processes)
-    scheduler.set_processes(processes)
-    process_names,start_times,durations= scheduler.run()
-    print(start_times)
-    render(process_names, start_times, durations, arrival_time_dict)
-    return redirect(url_for('render_dashboard'))
+
 
 def generate_color(process_name):
     hash_object = hashlib.sha256(process_name.encode())
@@ -127,18 +91,38 @@ def render_turnaround_time_chart(processes, start_times, durations, arrival_time
     app_layout.append(dcc.Graph(id='waiting-time-chart', figure=fig))
 
 
-
+def render_waiting_time_chart(processes, start_times, durations, arrival_times, app_layout):
+        print("########################################")
+        print("waiting time chart info:")
+        waiting_times= {process: 0 for process in processes}
+        for p in set(processes):
+            last_run=arrival_times[p]
+            for i in range(len(processes)):
+                if processes[i]==p:
+                    waiting_times[p]+=(start_times[i]-last_run)
+                    last_run=start_times[i]+durations[i]
+        colors={process:generate_color(process) for process in processes}
+        print(waiting_times)
+        print("########################################")
+        data = []
+        for p in waiting_times:
+            data.append(go.Bar(name=p, x=[p], y=[waiting_times[p]], marker_color=colors[p]))
+        layout = go.Layout(
+            title='Waiting Time for Each Process',
+            xaxis=dict(title='Process'),
+            yaxis=dict(title='Waiting Time'),
+            barmode='group'
+        )
+        fig = go.Figure(data=data, layout=layout)
+        app_layout.append(dcc.Graph(id='waiting-time-chart', figure=fig))
+        average_waiting_time = sum(waiting_times.values()) / len(waiting_times)
+        app_layout.append(html.P(f"Average Waiting Time: {average_waiting_time}", className="p-4"))
 
 def render_process_table(processes, start_times, durations, arrival_times, app_layout):
 
     print("########################################")
     print("process table info:")
-    print(processes)
-    print(start_times)
-    print(durations)
-    print(arrival_times)
     print("########################################")
-
     # Calculate start times and durations for each process
     start_time_dict = {process: start_times[i] for i, process in enumerate(processes)}
     durations_dict = {process: 0 for process in processes}
@@ -233,9 +217,50 @@ def render(processes=[], start_times=[], durations=[], arrival_times={}):
     add_header(app_layout)
     render_gantt_chart(processes, start_times, durations, app_layout)
     render_turnaround_time_chart(processes, start_times,durations,arrival_times, app_layout)
+    render_waiting_time_chart(processes, start_times, durations, arrival_times, app_layout)
     render_process_table(processes, start_times, durations,arrival_times, app_layout)
     add_footer(app_layout)
     dash_app.layout = html.Div(app_layout)
+    
+
+
+#Shceduler should return : [proceses] [start_times] [durations]
+@app.route('/schedule', methods=['POST'])
+def schedule():
+    job_data = request.json
+    print(job_data)
+    algorithm = job_data[-1]['algorithm']
+    if(algorithm == 'RR' or algorithm == 'PriorityRR'):
+        quantum = int(job_data[-1]['quantum'])
+    scheduler = Scheduler()
+    # Initialize the scheduling algorithm based on the selected algorithm
+    if algorithm == 'FCFS':
+        algo=FCFS()
+    elif algorithm == 'SJF':
+        algo=SJF()
+    elif algorithm == 'Priority':
+        algo=Priority()
+    elif algorithm == 'RR':
+         algo=RR(quantum)
+    elif algorithm == 'PriorityRR':
+        algo=PriorityRR(quantum)
+    scheduler.set_algorithm(algo)
+    job_data.pop()
+    process_names = [job['pid'] for job in job_data]
+    arrival_times = [job['arrival_time'] for job in job_data]
+    arrival_time_dict = {name: arrival for name, arrival in zip(process_names, arrival_times)}
+    durations = [job['burst_time'] for job in job_data]
+    priorities = [job['priority'] for job in job_data]
+    processes = [Process(name, int(arrival),int(duration)) for name, arrival, duration in zip(process_names, arrival_times, durations)]
+    if algorithm == 'Priority' or algorithm == "PriorityRR":
+        for process, priority in zip(processes, priorities):
+            process.priority = int(priority)
+    print(processes)
+    scheduler.set_processes(processes)
+    process_names,start_times,durations= scheduler.run()
+    print(start_times)
+    render(process_names, start_times, durations, arrival_time_dict)
+    return redirect(url_for('render_dashboard'))
 
 @app.route('/upload', methods=['POST'])
 def processFile():
