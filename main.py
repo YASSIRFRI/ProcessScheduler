@@ -232,12 +232,15 @@ def render(processes=[], start_times=[], durations=[], arrival_times={}):
     add_header(app_layout)
     render_gantt_chart(processes, start_times, durations, app_layout)
     render_turnaround_time_chart(processes, start_times,durations,arrival_times, app_layout)
+    render_process_table(processes, start_times, durations,arrival_times, app_layout)
     render_waiting_time_chart(processes, start_times, durations, arrival_times, app_layout)
     render_process_table(processes, start_times, durations,arrival_times, app_layout)
     render_cpu_utilization_chart(processes, durations, app_layout)
     add_footer(app_layout)
     dash_app.layout = html.Div(app_layout)
-    
+
+
+
 
 
 #Shceduler should return : [proceses] [start_times] [durations]
@@ -367,6 +370,189 @@ def compare():
 @app.route('/documentation')
 def documentation():
     return render_template('documentation.html')
+
+
+def render_comparison_box(title, processes, start_times, durations, arrival_times, app_layout):
+    termination_times = {processes[i]: 0 for i in range(len(processes))}
+    waiting_times = {process: 0 for process in processes}
+    start_time_dict = {process: start_times[i] for i, process in enumerate(processes)}
+    durations_dict = {process: 0 for process in processes}
+
+    for p in processes:
+        for i in range(len(processes)):
+            if processes[i] == p:
+                termination_times[p] = max(start_times[i] + durations[i], termination_times[p])
+
+    for p in set(processes):
+        last_run = arrival_times[p]
+        for i in range(len(processes)):
+            if processes[i] == p:
+                waiting_times[p] += (start_times[i] - last_run)
+                last_run = start_times[i] + durations[i]
+
+    for i, process in enumerate(processes):
+        start_time_dict[process] = min(start_time_dict[process], start_times[i])
+        durations_dict[process] += durations[i]
+
+    turnaround_times = {process: termination_times[process] - arrival_times[process] for process in processes}
+
+    # Calculate average waiting time and average turnaround time
+    average_waiting_time = sum(waiting_times.values()) / len(waiting_times)
+    average_turnaround_time = sum(turnaround_times.values()) / len(turnaround_times)
+
+    if title == "FCFS":
+        title = "First Come First Served (FCFS)"
+    elif title == "SJF":
+        title = "Shortest Job First (SJF)"
+    elif title == "P":
+        title = "Priority Scheduling"
+    elif title == "RR":
+        title = "Round Robin (RR)"
+    else:
+        title = "Priority Scheduling with Round Robin (PriorityRR)"
+
+    # Add elements to the app layout
+    app_layout.append(html.Div([
+        html.H3(html.Strong(title), className="text-center mb-4 lead p-3"),
+        html.Div([
+            html.P(f"Average Turnaround Time: {average_turnaround_time}", className="lead p-3"),
+            html.P(f"Average Waiting Time: {average_waiting_time}", className="lead p-3")
+        ], className="text-center")
+    ], className="border rounded p-4 mb-4", style={"margin": "16px 360px 16px 360px"}))
+
+
+def renderComparison(processes={}, start_times={}, durations={}, arrival_times={}):
+    app_layout = []
+    add_header(app_layout)
+    print(processes)
+    for key in processes:
+        render_comparison_box(key, processes[key], start_times[key], durations[key], arrival_times[key], app_layout)
+    add_footer(app_layout)
+    dash_app.layout = html.Div(app_layout)
+
+
+
+@app.route('/comparison', methods=['POST'])
+def comparison():
+    if 'file' not in request.files:
+        return redirect(request.url)
+    file = request.files['file']
+    if file.filename == '':
+        return redirect(request.url)
+    try:
+        file_wrapper = TextIOWrapper(file, encoding='utf-8')
+
+        # Read CSV file
+        job_data = []
+        csv_reader = csv.reader(file_wrapper)
+        for row in csv_reader:
+            try:
+                if len(row) == 3:
+                    pid, arrival_time, burst_time = row
+                    job_data.append({'pid': pid, 'arrival_time': int(arrival_time), 'burst_time': int(burst_time), 'priority': None})
+                else:
+                    pid, arrival_time, burst_time, priority = row
+                    priority = int(priority) if priority != 'None' else None
+                    job_data.append({'pid': pid, 'arrival_time': int(arrival_time), 'burst_time': int(burst_time), 'priority': priority})
+            except ValueError:
+                return "Error: Incorrect data format in CSV file."
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+    schedulerFCFS = Scheduler()
+    schedulerSJF = Scheduler()
+    schedulerP = Scheduler()
+    schedulerRR = Scheduler()
+    schedulerPRR = Scheduler()
+
+    fcfs = FCFS()
+    sjf = SJF()
+    priori = Priority()
+    rr = RR(int(request.form["quantum"]))
+    prioriRR = PriorityRR(int(request.form["quantum"]))
+
+    processes2 = dict()
+    start_times2 = dict()
+    durations2 = dict()
+    arrival_times2 = dict()
+
+    schedulerFCFS.set_algorithm(fcfs)
+    process_names = [job['pid'] for job in job_data]
+    arrival_times = [job['arrival_time'] for job in job_data]
+    arrival_time_dict = {name: arrival for name, arrival in zip(process_names, arrival_times)}
+    durations = [job['burst_time'] for job in job_data]
+    priorities = [job['priority'] for job in job_data]
+    processes = [Process(name, int(arrival), int(duration), priority=priority) for name, arrival, duration, priority in zip(process_names, arrival_times, durations, priorities)]
+    schedulerFCFS.set_processes(processes)
+    process_names, start_times, durations = schedulerFCFS.run()
+    processes2["FCFS"] = process_names
+    start_times2["FCFS"] = start_times
+    durations2["FCFS"] = durations
+    arrival_times2["FCFS"] = arrival_time_dict
+    print("Arrival Time Dict: ", arrival_time_dict)
+
+    schedulerSJF.set_algorithm(sjf)
+    process_names = [job['pid'] for job in job_data]
+    arrival_times = [job['arrival_time'] for job in job_data]
+    arrival_time_dict = {name: arrival for name, arrival in zip(process_names, arrival_times)}
+    durations = [job['burst_time'] for job in job_data]
+    priorities = [job['priority'] for job in job_data]
+    processes = [Process(name, int(arrival), int(duration), priority=priority) for name, arrival, duration, priority in zip(process_names, arrival_times, durations, priorities)]
+    schedulerSJF.set_processes(processes)
+    process_names, start_times, durations = schedulerSJF.run()
+    processes2["SJF"] = process_names
+    start_times2["SJF"] = start_times
+    durations2["SJF"] = durations
+    arrival_times2["SJF"] = arrival_time_dict
+    print("Arrival Time Dict: ", arrival_time_dict)
+
+    schedulerP.set_algorithm(priori)
+    process_names = [job['pid'] for job in job_data]
+    arrival_times = [job['arrival_time'] for job in job_data]
+    arrival_time_dict = {name: arrival for name, arrival in zip(process_names, arrival_times)}
+    durations = [job['burst_time'] for job in job_data]
+    priorities = [job['priority'] for job in job_data]
+    processes = [Process(name, int(arrival), int(duration), priority=priority) for name, arrival, duration, priority in zip(process_names, arrival_times, durations, priorities)]
+    schedulerP.set_processes(processes)
+    process_names, start_times, durations = schedulerP.run()
+    processes2["P"] = process_names
+    start_times2["P"] = start_times
+    durations2["P"] = durations
+    arrival_times2["P"] = arrival_time_dict
+    print("Arrival Time Dict: ", arrival_time_dict)
+
+    schedulerRR.set_algorithm(rr)
+    process_names = [job['pid'] for job in job_data]
+    arrival_times = [job['arrival_time'] for job in job_data]
+    arrival_time_dict = {name: arrival for name, arrival in zip(process_names, arrival_times)}
+    durations = [job['burst_time'] for job in job_data]
+    priorities = [job['priority'] for job in job_data]
+    processes = [Process(name, int(arrival), int(duration), priority=priority) for name, arrival, duration, priority in zip(process_names, arrival_times, durations, priorities)]
+    schedulerRR.set_processes(processes)
+    process_names, start_times, durations = schedulerRR.run()
+    processes2["RR"] = process_names
+    start_times2["RR"] = start_times
+    durations2["RR"] = durations
+    arrival_times2["RR"] = arrival_time_dict
+    print("Arrival Time Dict: ", arrival_time_dict)
+
+    schedulerPRR.set_algorithm(prioriRR)
+    process_names = [job['pid'] for job in job_data]
+    arrival_times = [job['arrival_time'] for job in job_data]
+    arrival_time_dict = {name: arrival for name, arrival in zip(process_names, arrival_times)}
+    durations = [job['burst_time'] for job in job_data]
+    priorities = [job['priority'] for job in job_data]
+    processes = [Process(name, int(arrival), int(duration), priority=priority) for name, arrival, duration, priority in zip(process_names, arrival_times, durations, priorities)]
+    schedulerPRR.set_processes(processes)
+    process_names, start_times, durations = schedulerPRR.run()
+    processes2["PRR"] = process_names
+    start_times2["PRR"] = start_times
+    durations2["PRR"] = durations
+    arrival_times2["PRR"] = arrival_time_dict
+    print("Arrival Time Dict: ", arrival_time_dict)
+
+    renderComparison(processes2, start_times2, durations2, arrival_times2)
+    return redirect(url_for('render_dashboard'))
 
 if __name__ == '__main__':
     app.run(debug=True)
