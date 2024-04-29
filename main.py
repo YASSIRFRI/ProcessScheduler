@@ -92,8 +92,6 @@ def render_turnaround_time_chart(processes, start_times, durations, arrival_time
 
 
 def render_waiting_time_chart(processes, start_times, durations, arrival_times, app_layout):
-        print("########################################")
-        print("waiting time chart info:")
         waiting_times= {process: 0 for process in processes}
         for p in set(processes):
             last_run=arrival_times[p]
@@ -102,8 +100,6 @@ def render_waiting_time_chart(processes, start_times, durations, arrival_times, 
                     waiting_times[p]+=(start_times[i]-last_run)
                     last_run=start_times[i]+durations[i]
         colors={process:generate_color(process) for process in processes}
-        print(waiting_times)
-        print("########################################")
         data = []
         for p in waiting_times:
             data.append(go.Bar(name=p, x=[p], y=[waiting_times[p]], marker_color=colors[p]))
@@ -117,6 +113,10 @@ def render_waiting_time_chart(processes, start_times, durations, arrival_times, 
         app_layout.append(dcc.Graph(id='waiting-time-chart', figure=fig))
         average_waiting_time = sum(waiting_times.values()) / len(waiting_times)
         app_layout.append(html.P(f"Average Waiting Time: {average_waiting_time}", className="p-4"))
+        
+
+def render_cpu_utilization_chart(processes, start_times, durations, app_layout):
+    pass
 
 def render_process_table(processes, start_times, durations, arrival_times, app_layout):
 
