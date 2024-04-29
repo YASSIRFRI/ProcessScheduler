@@ -71,16 +71,24 @@
 <div class="container mt-5">
     <div class="row">
 
-        <div class="col-md-6">
+        <div class="col-md-8">
             <h2>Upload Processes Data</h2>
             <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
                 <div class="form-group">
                     <label for="fileInput">Upload CSV or Exel file:</label>
                     <div class="custom-file">
-                        <input type="file" class="custom-file-input" id="fileInput" name="file">
-                        <label class="custom-file-label" for="fileInput">Browse</label>
+                        <input type="file" class="custom-file-input" id="fileInput" name="file" onchange="displayFileName()"">
+                        <label class="custom-file-label" for="fileInput" id="fileInputLabel">Browse</label>
                     </div>
                 </div>
+                <script>
+                    function displayFileName() {
+                        const input = document.getElementById('fileInput');
+                        const label = document.getElementById('fileInputLabel');
+                        const fileName = input.files[0].name;
+                        label.innerText = fileName;
+                    }
+                    </script>
                 <p>The file should be a CSV with columns: process_id, arrival_time, burst_time, priority.</p>
                 <div class="form-group">
                     <label for="algorithmSelect">Select Scheduling Algorithm:</label>
