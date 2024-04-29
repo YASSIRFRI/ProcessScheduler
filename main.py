@@ -115,8 +115,23 @@ def render_waiting_time_chart(processes, start_times, durations, arrival_times, 
         app_layout.append(html.P(f"Average Waiting Time: {average_waiting_time}", className="p-4"))
         
 
-def render_cpu_utilization_chart(processes, start_times, durations, app_layout):
-    pass
+def render_cpu_utilization_chart(processes, durations, app_layout):
+    total_cpu_time = sum(durations)
+    cpu_utilization = {process: 0 for process in processes}
+    
+    for i in range(len(processes)):
+        cpu_utilization[processes[i]] += durations[i]
+    
+    cpu_utilization_percentage = {process: (time / total_cpu_time) * 100 for process, time in cpu_utilization.items()}
+    
+    # Create pie chart data
+    labels = list(cpu_utilization_percentage.keys())
+    values = list(cpu_utilization_percentage.values())
+    colors = [generate_color(process) for process in labels]  # Use the same color scheme as waiting time chart
+        # Create the Pie chart
+    fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.3, marker=dict(colors=colors))])
+    fig.update_layout(title='CPU Utilization Per Process')
+    app_layout.append(dcc.Graph(id='cpu-utilization-chart', figure=fig))
 
 def render_process_table(processes, start_times, durations, arrival_times, app_layout):
 
@@ -219,6 +234,7 @@ def render(processes=[], start_times=[], durations=[], arrival_times={}):
     render_turnaround_time_chart(processes, start_times,durations,arrival_times, app_layout)
     render_waiting_time_chart(processes, start_times, durations, arrival_times, app_layout)
     render_process_table(processes, start_times, durations,arrival_times, app_layout)
+    render_cpu_utilization_chart(processes, durations, app_layout)
     add_footer(app_layout)
     dash_app.layout = html.Div(app_layout)
     
