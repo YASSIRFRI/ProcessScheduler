@@ -116,7 +116,6 @@ class RR(SchedulingAlgorithm):
     def __init__(self, time_quantum):
         self.quantum = time_quantum
         self.name = "Round Robin Scheduling"
-        
     def schedule(self, processes):
         processes.sort(key=lambda process: process.arrival_time)
         n = len(processes)
@@ -157,34 +156,88 @@ class RR(SchedulingAlgorithm):
         return names, start_times, duration
 
 class PriorityRR(SchedulingAlgorithm):
+
     def __init__(self, time_quantum):
-        self.time_quantum = time_quantum
-        self .name = "Priority Round Robin Scheduling"
+        self.quantum = time_quantum
+        self.name = "Priority with Round Robin Scheduling"
+
+    def check_all_queues_empty(self, queues):
+        for queue in queues:
+            if queue:
+                return False
+        return True
+
     def schedule(self, processes):
-        remaining_time = [process.burst_time for process in processes]
-        current_priorities = [process.priority for process in processes]
-        
         names = []
         start_times = []
         duration = []
-        current_time = 0
-
-        while any(remaining_time):
-            # Sort processes based on remaining burst time
-            sorted_indices = sorted(range(len(processes)), key=lambda i: (current_priorities[i], remaining_time[i]))
-            
-            for idx in sorted_indices:
-                if remaining_time[idx] > 0:
-                    execute_time = min(self.time_quantum, remaining_time[idx])
-                    names.append(processes[idx].pid)
-                    start_times.append(current_time)
-                    duration.append(execute_time)
-                    
-                    remaining_time[idx] -= execute_time
-                    current_time += execute_time
-
-                    # Update priorities based on the remaining burst time
-                    current_priorities[idx] = max(1, current_priorities[idx] - 1)
-
+        processes.sort(key=lambda process: (process.arrival_time, process.priority))
+        #priority 1 is the highest
+        max_priority = max([process.priority for process in processes])
+        queues=[[] for _ in range(max_priority+1)]
+        rrqueues =[[] for _ in range(max_priority+1)]
+        for process in processes:
+            queues[process.priority].append(process)
+        print(queues)
+        time_to_next = processes[0].arrival_time
+        current_queue = processes[0].priority
+        rrqueues[current_queue].append(queues[current_queue].pop(0))
+        while not self.check_all_queues_empty(rrqueues):
+            to_execute=rrqueues[current_queue].pop(0)
+            names.append(to_execute.pid)
+            start_times.append(time_to_next)
+            if to_execute.remaining_time>self.quantum:
+                duration.append(self.quantum)
+                to_execute.remaining_time-=self.quantum
+                time_to_next+=self.quantum
+            else:
+                duration.append(to_execute.remaining_time)
+                time_to_next+=to_execute.remaining_time
+                to_execute.remaining_time=0
+            for i in range(len(queues)):
+                if queues[i]:
+                    for process in queues[i]:
+                        if process.arrival_time<=time_to_next:
+                            rrqueues[i].append(queues[i].pop(0))
+            if to_execute.remaining_time>0:
+                rrqueues[current_queue].append(to_execute)
+            more_priorities=False
+            for i in range(1,current_queue):
+                if rrqueues[i]:
+                    more_priorities=True
+                    current_queue=i
+                    break
+            if more_priorities or rrqueues[current_queue]:
+                continue
+            else:
+                less_priorities=False
+                for i in range(current_queue+1,max_priority+1):
+                    if rrqueues[i]:
+                        less_priorities=True
+                        current_queue=i
+                        break
+            if not more_priorities and not less_priorities :
+                found_next=False
+                time_to_next=1000000
+                for i in range(1,max_priority+1):
+                    if queues[i] and queues[i][0].arrival_time<time_to_next:
+                        time_to_next=queues[i][0].arrival_time
+                        found_next=True
+                        current_queue=i
+                if not found_next:
+                    nxt=1
+                    for i in range(1,max_priority+1):
+                        if queues[i]:
+                            if queues[i][0].arrival_time<time_to_next:
+                                nxt=i
+                                found_next=True
+                                time_to_next=queues[i][0].arrival_time
+                    if not found_next:
+                        break
+                    else:
+                        rrqueues[nxt].append(queues[nxt].pop(0))
+                else:
+                    rrqueues[current_queue].append(queues[current_queue].pop(0))
         return names, start_times, duration
+
 
