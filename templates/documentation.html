@@ -87,11 +87,13 @@
                 <ul>
                     <li>process_id,arrival_time,burst_time</li>
                     <li>process_id,arrival_time,burst_time,priority (for priority-based algorithms)</li>
+                    <li style="color: red;"><red>NOTE:</red> If a priority based alogrithm is selected, the priority field is required (Smaller number means higher priority)</li>
                 </ul>
                 After uploading the file, choose one of the five available scheduling algorithms: First Come First Served (FCFS), Shortest Job First (SJF), Priority Scheduling, Round Robin, or Priority with Round Robin. If you choose Round Robin or Priority with Round Robin, you'll need to specify the time quantum.</li>
             <li><strong>Manual Upload:</strong> If you prefer, you can manually enter process data in the "Manual Upload" section. Enter information regarding processes (process_id, arrival_time, burst_time) manually. To add a process, click on the "Add Process" button. Once you have entered all the required process information and selected your algorithm, click the "Submit" button to process the data.</li>
-            <li><strong>Randomly Generate:</strong> Use the "Randomly Generate" section to create random process data for testing purposes. Specify the number of random processes to be generated, then click the "Generate Processes" button. After generating the processes, choose your algorithm and press the "Submit" button to process the data.</li>
+            <li><strong>Randomly Generate:</strong> Use the "Randomly Generate" section to create random process data for testing purposes. Specify the number of random processes to be generated,once the processes genereated, you can still manually edit the generated processes before submitting them.</li>
             <li><strong>Compare Algorithms:</strong> Visit the "Compare Algorithms" section to compare different process scheduling algorithms.</li>
+            <li><strong>Export Results As png:</strong> Once the results are displayed, you can export the results as images by clicking on the "Export As png" above the Gant chart</li>
             <li><strong>Documentation:</strong> Takes you to this page where you can read how to use the app.</li>
         </ol>
     </div>
@@ -108,9 +110,7 @@
         <p>SJF selects the process with the shortest burst time to execute next. It can be either preemptive or non-preemptive. In preemptive SJF, if a new process arrives with a shorter burst time than the currently running process, the CPU switches to the new process.</p>
         <p><strong>Complexity:</strong> 
             Our implementation of SJF has a complexity of <strong>O(nlogn)</strong> because we sort the processes based on their burst time. If the processes are already sorted based on their burst time, the complexity is <strong>O(n)</strong>.
-
         </p>
-    
         <h3>Priority Scheduling</h3>
         <p>In Priority Scheduling, each process is assigned a priority, and the process with the smallest priority number priority is executed first. If two processes have the same priority, FCFS is used as a tie-breaker.</p>
         <p><strong>Complexity:</strong> The complexity of Priority Scheduling is similar to SJF so our naive implementation has a complexity of <strong>O(n^2)</strong>,
