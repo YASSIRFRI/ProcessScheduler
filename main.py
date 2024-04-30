@@ -20,53 +20,66 @@ import hashlib
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 
-
-
 PLOTLY_LOGO = "https://images.plot.ly/logo/new-branding/plotly-logomark.png"
 
 # Initialize Flask app
 app = Flask(__name__)
 
-
 dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/',external_stylesheets=[dbc.themes.BOOTSTRAP])
 dash_app.layout = html.Div(id='output')
 
-
-
 def generate_color(process_name):
+    """
+    Generate a color based on the process name.
+
+    Args:
+        process_name (str): The name of the process.
+
+    Returns:
+        str: Hexadecimal color code.
+    """
     hash_object = hashlib.sha256(process_name.encode())
     hex_dig = hash_object.hexdigest()[:6]
     return '#' + hex_dig
 
-
-
-
 def render_gantt_chart(processes, start_times, durations, app_layout,algorithm=None):
+    """
+    Render a Gantt chart visualizing the job scheduling.
+
+    Args:
+        processes (list): List of process names.
+        start_times (list): List of start times for each process.
+        durations (list): List of durations for each process.
+        app_layout (list): List representing the layout of the Dash app.
+        algorithm (str, optional): The scheduling algorithm used. Defaults to None.
+    """
     tasks = []
-    # Generate a custom color for each process name
-    #unique_process_names = set(processes)
     colors = [generate_color(process_name) for process_name in processes]
     color_dict = {process: color for process, color in zip(processes, colors)} 
-    print(colors)
     for name, start, duration, color in zip(processes, start_times, durations, colors):
-        start = float(start)  # Convert start to float
+        start = float(start)
         tasks.append({'Task': name, 'Start': start, 'Finish': start + float(duration), 'Resource': name})
-    # Update the color attribute to use custom colors
     title='Job Scheduling Gantt Chart'
     fig = ff.create_gantt(tasks, index_col='Task', title=title, group_tasks=True, show_colorbar=True, colors=color_dict)
     fig.update_layout(xaxis_type='linear')
     app_layout.append(dcc.Graph(id='job-gantt-chart', figure=fig))
 
-
-
 def render_turnaround_time_chart(processes, start_times, durations, arrival_times, app_layout):
+    """
+    Render a bar chart showing the turnaround time for each process.
+
+    Args:
+        processes (list): List of process names.
+        start_times (list): List of start times for each process.
+        durations (list): List of durations for each process.
+        arrival_times (dict): Dictionary mapping process names to their arrival times.
+        app_layout (list): List representing the layout of the Dash app.
+    """
     termination_times={processes[i]:0 for i in range(len(processes))}
     for p in processes:
         for i in range(len(processes)):
             if processes[i]==p:
                 termination_times[p]=max(start_times[i]+durations[i],termination_times[p])
-    print(termination_times)
-    print(arrival_times)
     turnaround_times = {process: termination_times[process] - arrival_times[process] for process in processes}
     colors={process:generate_color(process) for process in processes}
     data = []
@@ -81,82 +94,84 @@ def render_turnaround_time_chart(processes, start_times, durations, arrival_time
     fig = go.Figure(data=data, layout=layout)
     app_layout.append(dcc.Graph(id='waiting-time-chart', figure=fig))
 
-
 def render_waiting_time_chart(processes, start_times, durations, arrival_times, app_layout):
-        waiting_times= {process: 0 for process in processes}
-        for p in set(processes):
-            last_run=arrival_times[p]
-            for i in range(len(processes)):
-                if processes[i]==p:
-                    waiting_times[p]+=(start_times[i]-last_run)
-                    last_run=start_times[i]+durations[i]
-        colors={process:generate_color(process) for process in processes}
-        data = []
-        for p in waiting_times:
-            data.append(go.Bar(name=p, x=[p], y=[waiting_times[p]], marker_color=colors[p]))
-        layout = go.Layout(
-            title='Waiting Time for Each Process',
-            xaxis=dict(title='Process'),
-            yaxis=dict(title='Waiting Time'),
-            barmode='group'
-        )
-        fig = go.Figure(data=data, layout=layout)
-        app_layout.append(dcc.Graph(id='waiting-time-chart', figure=fig))
-        average_waiting_time = sum(waiting_times.values()) / len(waiting_times)
-        app_layout.append(html.P(
-            children=[
-                html.Span("Average Waiting Time: ", style={"font-size": "1.25rem"}),  # Text with increased font size
-                html.Span(
-                    f"{average_waiting_time:.2f}",  # Numerical value with two decimal places
-                    style={"font-size": "1.5rem", "color": "red", "margin-left": "8px"}  # Increased font size, red color, and margin between the text and numerical value
-                )
-            ],
-            className="p-4"
-        ))
+    """
+    Render a bar chart showing the waiting time for each process.
 
-        
+    Args:
+        processes (list): List of process names.
+        start_times (list): List of start times for each process.
+        durations (list): List of durations for each process.
+        arrival_times (dict): Dictionary mapping process names to their arrival times.
+        app_layout (list): List representing the layout of the Dash app.
+    """
+    waiting_times= {process: 0 for process in processes}
+    for p in set(processes):
+        last_run=arrival_times[p]
+        for i in range(len(processes)):
+            if processes[i]==p:
+                waiting_times[p]+=(start_times[i]-last_run)
+                last_run=start_times[i]+durations[i]
+    colors={process:generate_color(process) for process in processes}
+    data = []
+    for p in waiting_times:
+        data.append(go.Bar(name=p, x=[p], y=[waiting_times[p]], marker_color=colors[p]))
+    layout = go.Layout(
+        title='Waiting Time for Each Process',
+        xaxis=dict(title='Process'),
+        yaxis=dict(title='Waiting Time'),
+        barmode='group'
+    )
+    fig = go.Figure(data=data, layout=layout)
+    app_layout.append(dcc.Graph(id='waiting-time-chart', figure=fig))
+    average_waiting_time = sum(waiting_times.values()) / len(waiting_times)
+    app_layout.append(html.P(f"Average Waiting Time: {average_waiting_time}", className="p-4"))
 
 def render_cpu_utilization_chart(processes, durations, app_layout):
+    """
+    Render a pie chart showing CPU utilization per process.
+
+    Args:
+        processes (list): List of process names.
+        durations (list): List of durations for each process.
+        app_layout (list): List representing the layout of the Dash app.
+    """
     total_cpu_time = sum(durations)
     cpu_utilization = {process: 0 for process in processes}
-    
     for i in range(len(processes)):
         cpu_utilization[processes[i]] += durations[i]
-    
     cpu_utilization_percentage = {process: (time / total_cpu_time) * 100 for process, time in cpu_utilization.items()}
-    
-    # Create pie chart data
     labels = list(cpu_utilization_percentage.keys())
     values = list(cpu_utilization_percentage.values())
-    colors = [generate_color(process) for process in labels]  # Use the same color scheme as waiting time chart
-        # Create the Pie chart
+    colors = [generate_color(process) for process in labels]
     fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.3, marker=dict(colors=colors))])
     fig.update_layout(title='CPU Utilization Per Process')
     app_layout.append(dcc.Graph(id='cpu-utilization-chart', figure=fig))
 
 def render_process_table(processes, start_times, durations, arrival_times, app_layout):
-    # Calculate start times and durations for each process
+    """
+    Render a table showing process details.
+
+    Args:
+        processes (list): List of process names.
+        start_times (list): List of start times for each process.
+        durations (list): List of durations for each process.
+        arrival_times (dict): Dictionary mapping process names to their arrival times.
+        app_layout (list): List representing the layout of the Dash app.
+    """
     start_time_dict = {process: start_times[i] for i, process in enumerate(processes)}
     durations_dict = {process: 0 for process in processes}
     for i, process in enumerate(processes):
         start_time_dict[process] = min(start_time_dict[process], start_times[i])
         durations_dict[process] += durations[i]
-
     termination_times={processes[i]:0 for i in range(len(processes))}
     for p in processes:
         for i in range(len(processes)):
             if processes[i]==p:
                 termination_times[p]=max(start_times[i]+durations[i],termination_times[p])
-
-    # Calculate turnaround times for each process
     turnaround_times = {process: termination_times[process] - arrival_times[process] for process in processes}
-
-    # Generate colors for each process
     colors = {process: generate_color(process) for process in processes}
-
     processes = list(set(processes))
-
-    # Prepare data for the table
     data = {
         "Process": processes,
         "Arrival Time": [arrival_times[process] for process in processes],
@@ -165,11 +180,7 @@ def render_process_table(processes, start_times, durations, arrival_times, app_l
         "Finish Time": [turnaround_times[process] + arrival_times[process] for process in processes],
         "Turnaround Time": [turnaround_times[process] for process in processes]
     }
-
-    # Create the DataTable with Bootstrap stripped table and padding
     table = dbc.Table.from_dataframe(pd.DataFrame(data), striped=True, bordered=True, hover=True)
-
-    # Append the table and average turnaround time to the layout
     app_layout.append(html.Div([
     html.Div(table, className="p-4"),  # Add padding
     html.P(
@@ -186,6 +197,12 @@ def render_process_table(processes, start_times, durations, arrival_times, app_l
 
 
 def add_header(app_layout):
+    """
+    Add header to the layout.
+
+    Args:
+        app_layout (list): List representing the layout of the Dash app.
+    """
     header = dbc.Navbar(
         dbc.Container(
             [
@@ -224,13 +241,26 @@ def add_header(app_layout):
     )
     app_layout.append(header)
 
-
 def add_footer(app_layout):
+    """
+    Add footer to the layout.
+
+    Args:
+        app_layout (list): List representing the layout of the Dash app.
+    """
     footer = html.Footer("Process Scheduling Visualizer 2024", className="footer text-center fixed-bottom bg-dark text-light")
     app_layout.append(footer)
 
-
 def render(processes=[], start_times=[], durations=[], arrival_times={}):
+    """
+    Render the Dash app with the given process data.
+
+    Args:
+        processes (list): List of process names.
+        start_times (list): List of start times for each process.
+        durations (list): List of durations for each process.
+        arrival_times (dict): Dictionary mapping process names to their arrival times.
+    """
     app_layout = []
     add_header(app_layout)
     render_gantt_chart(processes, start_times, durations, app_layout)
@@ -245,9 +275,15 @@ def render(processes=[], start_times=[], durations=[], arrival_times={}):
 
 
 
-#Shceduler should return : [proceses] [start_times] [durations]
+
 @app.route('/schedule', methods=['POST'])
 def schedule():
+    """
+    Endpoint to schedule processes.
+
+    Returns:
+        Response: Redirects to the dashboard.
+    """
     job_data = request.json
     print(job_data)
     algorithm = job_data[-1]['algorithm']
@@ -285,6 +321,12 @@ def schedule():
 
 @app.route('/upload', methods=['POST'])
 def processFile():
+    """
+    Process uploaded file.
+
+    Returns:
+        Response: Redirects to the dashboard.
+    """
     if 'file' not in request.files:
         return redirect(request.url)
     file = request.files['file']
@@ -342,39 +384,88 @@ def processFile():
     render(process_names, start_times, durations, arrival_time_dict)
     return redirect(url_for('render_dashboard'))
 
-
-
-
 @app.route('/')
 def index():
+    """
+    Endpoint for the index page.
+
+    Returns:
+        str: Rendered HTML page.
+    """
     return render_template('documentation.html')
 
 @app.route('/file')
 def fileu():
+    """
+    Endpoint for the file upload page.
+
+    Returns:
+        str: Rendered HTML page.
+    """
     return render_template('file.html')
 
 @app.route('/manual')
 def manual():
+    """
+    Endpoint for the manual input page.
+
+    Returns:
+        str: Rendered HTML page.
+    """
     return render_template('manual.html')
 
 @app.route('/generate')
 def random():
+    """
+    Endpoint for the random generation page.
+
+    Returns:
+        str: Rendered HTML page.
+    """
     return render_template('generate.html')
 
 @app.route('/dashboard/')
 def render_dashboard():
+    """
+    Endpoint for rendering the dashboard.
+
+    Returns:
+        str: Rendered dashboard.
+    """
     return dash_app.index()
 
 @app.route('/compare')
 def compare():
+    """
+    Endpoint for the comparison page.
+
+    Returns:
+        str: Rendered HTML page.
+    """
     return render_template('compare.html')
 
 @app.route('/documentation')
 def documentation():
+    """
+    Endpoint for the documentation page.
+
+    Returns:
+        str: Rendered HTML page.
+    """
     return render_template('documentation.html')
 
-
 def render_comparison_box(title, processes, start_times, durations, arrival_times, app_layout):
+    """
+    Render comparison box for each scheduling algorithm.
+
+    Args:
+        title (str): Title of the comparison box.
+        processes (list): List of process names.
+        start_times (list): List of start times for each process.
+        durations (list): List of durations for each process.
+        arrival_times (dict): Dictionary mapping process names to their arrival times.
+        app_layout (list): List representing the layout of the Dash app.
+    """
     termination_times = {processes[i]: 0 for i in range(len(processes))}
     waiting_times = {process: 0 for process in processes}
     start_time_dict = {process: start_times[i] for i, process in enumerate(processes)}
@@ -424,6 +515,15 @@ def render_comparison_box(title, processes, start_times, durations, arrival_time
 
 
 def renderComparison(processes={}, start_times={}, durations={}, arrival_times={}):
+    """
+    Render comparison page for different scheduling algorithms.
+
+    Args:
+        processes (dict): Dictionary of processes for each algorithm.
+        start_times (dict): Dictionary of start times for each algorithm.
+        durations (dict): Dictionary of durations for each algorithm.
+        arrival_times (dict): Dictionary of arrival times for each algorithm.
+    """
     app_layout = []
     add_header(app_layout)
     print(processes)
@@ -436,6 +536,12 @@ def renderComparison(processes={}, start_times={}, durations={}, arrival_times={
 
 @app.route('/comparison', methods=['POST'])
 def comparison():
+    """
+    Endpoint to compare different scheduling algorithms.
+
+    Returns:
+        Response: Redirects to the dashboard.
+    """
     if 'file' not in request.files:
         return redirect(request.url)
     file = request.files['file']
