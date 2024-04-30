@@ -47,21 +47,22 @@ This project implements various process scheduling algorithms using Flask, a Pyt
 
 5. **Documentation:** Takes you to this page where you can read how to use the app.
 
-## Algorithm Description and Complexity
+## Algorithm Description and Complexity Analysis
 - **First Come First Served (FCFS):** Simplest scheduling algorithm where processes are executed in the order they arrive.
-    - Complexity: O(n)
+    - Complexity: O(nlogn) in the worst case due to sorting based on arrival time.
 
 - **Shortest Job First (SJF):** Selects the process with the shortest burst time to execute next.
-    - Complexity: O(n^2) (naive implementation), O(nlogn) (using priority queue)
+    - Complexity: O(nlogn) due to sorting based on burst time.
 
 - **Priority Scheduling:** Executes processes based on their priority, with lower priority processes executed first.
-    - Complexity: O(n^2) (naive implementation), O(nlogn) (using priority queue)
+    - Complexity: O(n^2) (naive implementation), O(nlogn) (using priority queue).
 
 - **Round Robin:** Preemptive scheduling where each process is assigned a fixed time slice (quantum) to execute.
-    - Complexity: O(n^2) (for a time slice of 1), O(n) (for larger time slices)
+    - Complexity: O(n*(MaxBurstTime/quantum)+nlogn) assuming processes are not sorted by arrival time. 
 
 - **Priority with Round Robin:** Combines Priority Scheduling and Round Robin.
-    - Complexity: O(nlogn) (using priority queue)
+    - Complexity: O(n*(MaxBurstTime/quantum)+nlogn) (worst-case time complexity).
+
 
 ## References
 - [Flask Documentation](https://flask.palletsprojects.com/en/2.0.x/)
