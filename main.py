@@ -60,15 +60,6 @@ def render_gantt_chart(processes, start_times, durations, app_layout,algorithm=N
 
 
 def render_turnaround_time_chart(processes, start_times, durations, arrival_times, app_layout):
-
-    print("########################################")
-    print("turnaround time chart info:")
-    print(processes)
-    print(start_times)
-    print(durations)
-    print(arrival_times)
-    print("########################################")
-
     termination_times={processes[i]:0 for i in range(len(processes))}
     for p in processes:
         for i in range(len(processes)):
@@ -112,7 +103,17 @@ def render_waiting_time_chart(processes, start_times, durations, arrival_times, 
         fig = go.Figure(data=data, layout=layout)
         app_layout.append(dcc.Graph(id='waiting-time-chart', figure=fig))
         average_waiting_time = sum(waiting_times.values()) / len(waiting_times)
-        app_layout.append(html.P(f"Average Waiting Time: {average_waiting_time}", className="p-4"))
+        app_layout.append(html.P(
+            children=[
+                html.Span("Average Waiting Time: ", style={"font-size": "1.25rem"}),  # Text with increased font size
+                html.Span(
+                    f"{average_waiting_time:.2f}",  # Numerical value with two decimal places
+                    style={"font-size": "1.5rem", "color": "red", "margin-left": "8px"}  # Increased font size, red color, and margin between the text and numerical value
+                )
+            ],
+            className="p-4"
+        ))
+
         
 
 def render_cpu_utilization_chart(processes, durations, app_layout):
@@ -134,10 +135,6 @@ def render_cpu_utilization_chart(processes, durations, app_layout):
     app_layout.append(dcc.Graph(id='cpu-utilization-chart', figure=fig))
 
 def render_process_table(processes, start_times, durations, arrival_times, app_layout):
-
-    print("########################################")
-    print("process table info:")
-    print("########################################")
     # Calculate start times and durations for each process
     start_time_dict = {process: start_times[i] for i, process in enumerate(processes)}
     durations_dict = {process: 0 for process in processes}
@@ -174,11 +171,18 @@ def render_process_table(processes, start_times, durations, arrival_times, app_l
 
     # Append the table and average turnaround time to the layout
     app_layout.append(html.Div([
-        html.Div(table, className="p-4"),  # Add padding
-        html.P(f"Average Turnaround Time: {sum(turnaround_times.values()) / len(turnaround_times)}", className="p-4")
-    ]))
-
-
+    html.Div(table, className="p-4"),  # Add padding
+    html.P(
+        children=[
+            html.Span("Average Turnaround Time: ", style={"font-size": "1.25rem"}),  # Text with increased font size
+            html.Span(
+                f"{sum(turnaround_times.values()) / len(turnaround_times):.2f}",  # Numerical value with two decimal places
+                style={"font-size": "1.5rem", "color": "red", "margin-left": "8px"}  # Increased font size, red color, and margin between the text and numerical value
+            )
+        ],
+        className="p-4",
+    ),
+    ], className="container mt-4"))
 
 
 def add_header(app_layout):
@@ -188,7 +192,6 @@ def add_header(app_layout):
                 html.A(
                     dbc.Row(
                         [
-                            dbc.Col(html.Img(src=PLOTLY_LOGO, height="30px")),
                             dbc.Col(dbc.NavbarBrand("Process Scheduling Algorithm", className="ms-2")),
                         ],
                         align="center",
@@ -205,10 +208,10 @@ def add_header(app_layout):
                     children=[
                         dbc.Nav(
                             [
-                                dbc.NavItem(dbc.NavLink("Manualy generate", href="/manual")),
-                                dbc.NavItem(dbc.NavLink("Randomly generate", href="/manual")),
-                                dbc.NavItem(dbc.NavLink("File upload", href="/upload")),
-                                dbc.NavItem(dbc.NavLink("Compare algorithms", href="/compare")),
+                                dbc.NavItem(dbc.NavLink("Manualy generate", href="../manual",external_link=True)),
+                                dbc.NavItem(dbc.NavLink("Randomly generate", href="/generate",external_link=True)),
+                                dbc.NavItem(dbc.NavLink("File upload", href="/file",external_link=True)),
+                                dbc.NavItem(dbc.NavLink("Compare algorithms", href="/compare",external_link=True)),
                             ],
                             navbar=True,
                         )
@@ -234,7 +237,6 @@ def render(processes=[], start_times=[], durations=[], arrival_times={}):
     render_turnaround_time_chart(processes, start_times,durations,arrival_times, app_layout)
     render_process_table(processes, start_times, durations,arrival_times, app_layout)
     render_waiting_time_chart(processes, start_times, durations, arrival_times, app_layout)
-    render_process_table(processes, start_times, durations,arrival_times, app_layout)
     render_cpu_utilization_chart(processes, durations, app_layout)
     add_footer(app_layout)
     dash_app.layout = html.Div(app_layout)
