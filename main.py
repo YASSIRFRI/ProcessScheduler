@@ -125,7 +125,17 @@ def render_waiting_time_chart(processes, start_times, durations, arrival_times, 
     fig = go.Figure(data=data, layout=layout)
     app_layout.append(dcc.Graph(id='waiting-time-chart', figure=fig))
     average_waiting_time = sum(waiting_times.values()) / len(waiting_times)
-    app_layout.append(html.P(f"Average Waiting Time: {average_waiting_time}", className="p-4"))
+    app_layout.append(html.P(
+        children=[
+            html.Span("Average Waiting Time: ", style={"font-size": "1.25rem"}),  # Text with increased font size
+            html.Span(
+                f"{average_waiting_time:.2f}",  # Numerical value with two decimal places
+                style={"font-size": "1.5rem", "color": "red", "margin-left": "8px"}  # Increased font size, red color, and margin between the text and numerical value
+            )
+        ],
+        className="p-4"
+    ))
+
 
 def render_cpu_utilization_chart(processes, durations, app_layout):
     """
@@ -229,6 +239,7 @@ def add_header(app_layout):
                                 dbc.NavItem(dbc.NavLink("Randomly generate", href="/generate",external_link=True)),
                                 dbc.NavItem(dbc.NavLink("File upload", href="/file",external_link=True)),
                                 dbc.NavItem(dbc.NavLink("Compare algorithms", href="/compare",external_link=True)),
+                                dbc.NavItem(dbc.NavLink("Documentation", href="/documentation",external_link=True)),
                             ],
                             navbar=True,
                         )
